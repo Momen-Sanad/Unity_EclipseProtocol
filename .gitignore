@@ -1,0 +1,75 @@
+# Unity Generated Folders
+[Ll]ibrary/
+[Tt]emp/
+[Oo]bj/
+[Bb]uild/
+[Bb]uilds/
+[Ll]ogs/
+[Uu]ser[Ss]ettings/
+[Mm]emory[Cc]aptures/
+[Rr]ecordings/
+[Ss]creenshots/
+
+# Unity Addressables
+/[Aa]ssets/[Aa]ddressable[Aa]ssets[Dd]ata/*/*.bin*
+/[Aa]ssets/[Ss]treaming[Aa]ssets/aa*
+
+# IDE / Editor Files
+
+# Visual Studio
+.vs/
+*.csproj
+*.unityproj
+*.sln
+*.suo
+*.tmp
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.mdb
+*.opendb
+*.VC.db
+
+# JetBrains Rider / Consulo
+.idea/
+.consulo/
+[Aa]ssets/[Pp]lugins/[Ee]ditor/[Jj]et[Bb]rains*
+[Aa]ssets/[Rr]ider[Ff]low.[Uu]ser[Dd]ata/
+
+# VSCode
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# System Files
+.DS_Store
+.history/
+
+# Build Outputs
+*.apk
+*.aab
+*.app
+*.unitypackage
+*.zip
+*.rar
+
+# Logs
+*.log
+*.ahbuildinfo
+**/log.txt
+
+# Crash / Debug
+sysinfo.txt
+crashlytics-build.properties
+
+# Unity Meta Handling
+# Keep meta files (IMPORTANT)
+!*.meta
+
+# Optional Exceptions
+!DOTween.dll
