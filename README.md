@@ -36,12 +36,12 @@ The project focuses on clean architecture, physics-based player control, procedu
 - Version Control: Git + GitHub
 
 ## Controls
-| Action | Keyboard/Mouse | Controller (Planned) |
-|---|---|---|
-| Move | WASD |
-| Dash | Space |
-| Interact | E |
-| Pause | Esc |
+| Action | Keyboard/Mouse
+|---|---|
+| Move | WASD
+| Dash | Space
+| Interact | E
+| Pause | Esc
 
 ## Project Structure
 ```text
