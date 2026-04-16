@@ -100,4 +100,4 @@ Assets/
 - Document major system changes in the GDD or project notes.
 
 ## License
- MIT
+  Creative Commons CC0 1.0 Universal
