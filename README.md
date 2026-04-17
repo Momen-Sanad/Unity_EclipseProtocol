@@ -86,7 +86,7 @@ Assets/
 
 
 ## Documentation
-- Course GDD: [`Game Design Document (GDD).md`](./Assets/Documnets/Game%20Design%20Document%20(GDD)%20Template.md)
+- Course GDD: [`Game Design Document (GDD).md`](./Assets/Documents/Game%20Design%20Document%20(GDD).md)
 
 
 ## Team
