@@ -23,10 +23,10 @@
 ### 1.1 Project Branding
 
 - Project title: Eclipse Protocol  
-- Team members (1-2):  
+- Team members (1-2): Momen Mahmoud, Rana Dief  
 - Course / section: SWGCG351 \- Game Design and Development (Unity 3D Project, Spring 2026\)  
 - Instructor: Dr. Mohamed Sami Rakha  
-- Contact info:  
+- Contact info: Team repository README + course submission channels (Google Classroom and GitHub).  
 - Logo / typography direction: Sci-fi industrial style, clean sans-serif, emergency/station-warning visual language.
 
 ### 1.2 Version History
@@ -71,7 +71,8 @@
 2. Collect energy cells and maintain survival resources.  
 3. Restore power nodes to progress and stabilize access.  
 4. Survive AI pressure and complete extraction.  
-- Add a simple flow diagram image or figure reference:
+- Core loop diagram:  
+![Core Gameplay Loop](./GDD_Assets/core_loop_diagram.png)
 
 ### 2.3 Camera Technical Plan
 
@@ -95,7 +96,7 @@
 ### 3.2 Rigidbody and Collider Setup
 
 - Player collider type: CapsuleCollider  
-- Rigidbody values (mass, drag, angular drag):  
+- Rigidbody values (mass, drag, angular drag): `1.5`, `6.0`, `0.05`  
 - Constraints (freeze rotation axes, etc.): Freeze unwanted rotation to keep stable top-down control.
 
 ### 3.3 Movement Logic
@@ -112,13 +113,13 @@
 ### 4.1 Dash Design
 
 - Dash direction rule: Movement vector at dash trigger (can be updated to cursor-based if desired).  
-- Dash force: TBD  
+- Dash force: Implemented as a dash burst speed of `14` units/s for `1.0s`  
 - Dash duration: 1 second  
 - Dash cooldown: 8 seconds
 
 ### 4.2 Damage and I-Frames
 
-- Invulnerability window duration:  
+- Invulnerability window duration: `1.0s` (full dash duration)  
 - Enemy collision is ignored during dash using temporary layer collision changes or an invulnerability flag for trigger checks.
 
 ### 4.3 Survival Economy
@@ -142,6 +143,7 @@
   - Phase 1: Baked NavMesh in a static test room.  
   - Final phase: Runtime/dynamic NavMesh update using `NavMeshSurface` for generated levels.  
 - Agent settings (speed, acceleration, stopping distance):
+- Agent settings (speed, acceleration, stopping distance): `3.5`, `8.0`, `0.2`
 
 ### 5.2 Enemy Types
 
@@ -157,13 +159,14 @@
   - Chase \-\> Return/Patrol: Player exits detection range.  
   - Return \-\> Patrol: Drone reaches assigned route/post.  
 - Detection method: `Physics.OverlapSphere` and/or raycast line-of-sight validation.  
-- Add FSM flowchart image reference:
+- FSM flowchart image reference:  
+![Drone FSM Flowchart](./GDD_Assets/fsm_flowchart.png)
 
 ### 5.4 Combat / Collision Logic
 
 - Attack behavior: Projectile attack or physical dash attack when in attack range.  
-- Damage formula:  
-- Player hit cooldown / grace period:
+- Damage formula: Phase 1 prototype uses contact damage of `10` per valid hit event.  
+- Player hit cooldown / grace period: `0.5s` grace period between consecutive drone hits.
 
 ---
 
@@ -260,9 +263,10 @@
 - Energy bar position: Near health bar for paired survival readability.  
 - Dash cooldown icon: Near ability area (bottom-right or near energy bar).  
 - Mission objective text: Top-center or upper-left objective panel.  
-- Optional minimap / compass:  
+- Optional minimap / compass: Not required for Phase 1 (deferred to final polish if time allows).  
 - Required state messages: Game Over, Victory, pause indicator, node/mission updates.  
-- Add HUD mockup reference:
+- HUD mockup reference:  
+![HUD Mockup](./GDD_Assets/hud_mockup.png)
 
 ### 8.3 Responsive Behavior
 
@@ -303,7 +307,7 @@
 
 - AudioMixer groups: Master, Music, SFX.  
 - Spatial blend usage: 3D spatial audio for world sounds (target blend near 1.0 for positional sources).  
-- Attenuation plan (min/max distance):  
+- Attenuation plan (min/max distance): Drone hum and ambient sources use Min Distance `2` and Max Distance `20` with logarithmic falloff.
 - Pause effect: Optional low-pass filter to create muffled paused soundscape.
 
 ### 10.2 Audio Content
@@ -317,7 +321,10 @@
   - Drone destruction  
   - UI click/confirm  
 - Music list:  
-- Priority and volume balancing notes:
+  - Main gameplay loop (low-intensity tension track)  
+  - Alert layer (high-intensity overlay for danger states)  
+  - Menu/briefing track  
+- Priority and volume balancing notes: Keep SFX readability above music during combat (SFX -6 dB target, Music -12 dB target baseline).
 
 ### 10.3 Milestone Roadmap
 
@@ -331,20 +338,20 @@
 
 ## 11\) Phase 1 Checklist (Midway \- 30%)
 
-- [ ] 10+ page technical GDD is complete (not a draft).  
-- [ ] Architecture mapping is defined (C\# classes and relationships).  
-- [ ] Physics constants are defined (mass, drag, dash force values).  
-- [ ] AI FSM flowchart is included.  
-- [ ] UI mockups are included.  
-- [ ] 3D player prototype uses Rigidbody movement in `FixedUpdate()`.  
-- [ ] Dash works with energy cost and cooldown.  
-- [ ] 3.5D camera follow is implemented.  
-- [ ] Collision layers are configured (Player/Environment separation).  
-- [ ] Baked NavMesh exists in a static test room.  
-- [ ] At least one patrol drone uses `NavMeshAgent` with waypoint logic.  
-- [ ] Detection sphere/proximity trigger is verified.  
-- [ ] Static 3D sandbox level exists (floors/walls/pillars).  
-- [ ] Player/drone/energy-cell are set up as prefabs.
+- [x] 10+ page technical GDD is complete (not a draft).  
+- [x] Architecture mapping is defined (C\# classes and relationships).  
+- [x] Physics constants are defined (mass, drag, dash force values).  
+- [x] AI FSM flowchart is included.  
+- [x] UI mockups are included.  
+- [x] 3D player prototype uses Rigidbody movement in `FixedUpdate()`.  
+- [x] Dash works with energy cost and cooldown.  
+- [x] 3.5D camera follow is implemented.  
+- [x] Collision layers are configured (Player/Environment separation).  
+- [x] Baked NavMesh exists in a static test room.  
+- [x] At least one patrol drone uses `NavMeshAgent` with waypoint logic.  
+- [x] Detection sphere/proximity trigger is verified.  
+- [x] Static 3D sandbox level exists (floors/walls/pillars).  
+- [x] Player/drone/energy-cell are set up as prefabs.
 
 ---
 
@@ -371,10 +378,10 @@
 
 ### 13.1 Files
 
-- [ ] GDD PDF (10+ pages).  
-- [ ] Unity project source.  
+- [x] GDD PDF (10+ pages).  
+- [x] Unity project source.  
 - [ ] Playable standalone build (`.exe` or platform equivalent).  
-- [ ] `README.md` with setup/run steps.  
+- [x] `README.md` with setup/run steps.  
 - [ ] Asset/source attributions (if applicable).
 
 ### 13.2 Platform and Deadline Rules
@@ -408,4 +415,3 @@
 - C. Class diagram  
 - D. HUD wireframe/mockup  
 - E. Performance notes and risk list
-

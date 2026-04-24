@@ -75,7 +75,7 @@ Assets/
 ### Run in Editor
 1. Clone this repository.
 2. Open the project with Unity Hub.
-3. Open the main gameplay scene.
+3. Open `Assets/Scenes/Phase1_Sandbox.unity`.
 4. Press Play.
 
 ### Build
@@ -86,7 +86,9 @@ Assets/
 
 
 ## Documentation
-- Course GDD: [`Game Design Document (GDD).md`](./Assets/Documents/Game%20Design%20Document%20(GDD).md)
+- Course GDD: [`Assets/_project/Documents/Game Design Document (GDD).md`](./Assets/_project/Documents/Game%20Design%20Document%20(GDD).md)
+- Exported GDD PDF: `Assets/_project/Documents/EclipseProtocol_GDD_v1_0.pdf`
+- Phase 1 evidence captures: `Assets/_project/Documents/Evidence/`
 
 
 ## Team

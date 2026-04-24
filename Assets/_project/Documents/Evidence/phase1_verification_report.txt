@@ -1,0 +1,47 @@
+Eclipse Protocol - Phase 1 Verification Report
+Date: 2026-04-24 22:02:12
+
+[PASS] Layer exists: Player - index=8
+[PASS] Layer exists: Enemy - index=9
+[PASS] Layer exists: Environment - index=10
+[PASS] Layer exists: Projectile - index=11
+[PASS] Collision Player-Environment - must collide
+[PASS] Collision Player-Enemy - must collide
+[PASS] Collision Enemy-Enemy - must be disabled
+[PASS] Collision Projectile-Environment - must collide
+[PASS] Collision Projectile-Enemy - must collide
+[PASS] Collision Projectile-Player - must be disabled
+[PASS] GameBalanceData asset - Assets/_project/ScriptableObjects/GameBalanceData.asset
+[PASS] Player mass - 1.5
+[PASS] Player drag - 6
+[PASS] Player angular drag - 0.05
+[PASS] Dash speed - 14
+[PASS] Dash duration - 1
+[PASS] Dash cooldown - 8
+[PASS] Dash energy cost - 20
+[PASS] Drone speed - 3.5
+[PASS] Drone acceleration - 8
+[PASS] Drone stopping distance - 0.2
+[PASS] Drone detection radius - 8
+[PASS] Player object exists - Scene object name: Player
+[PASS] Player layer assignment - layer=8
+[PASS] Player Rigidbody - Rigidbody attached
+[PASS] PlayerController - PlayerController attached
+[PASS] Rigidbody mass value - 1.5
+[PASS] Rigidbody linear damping value - 6
+[PASS] Rigidbody angular damping value - 0.05
+[PASS] Main Camera exists - Scene object name: Main Camera
+[PASS] CameraFollow3D - Camera follow script attached
+[PASS] Patrol drone exists - Scene object name: PatrolDrone
+[PASS] Drone layer assignment - layer=9
+[PASS] NavMeshAgent attached - NavMeshAgent component
+[PASS] DronePatrolAI attached - DronePatrolAI component
+[PASS] DroneDetectionSensor attached - DroneDetectionSensor component
+[PASS] Waypoint count >= 2 - count=2
+[PASS] Detection radius = 8 - radius=8
+[PASS] Baked NavMesh present - vertices=148
+[PASS] Prefab exists: Player - Assets/_project/Prefabs/Gameplay/Player.prefab
+[PASS] Prefab exists: PatrolDrone - Assets/_project/Prefabs/Enemies/PatrolDrone.prefab
+[PASS] Prefab exists: EnergyCell - Assets/_project/Prefabs/Gameplay/EnergyCell.prefab
+
+Summary: 42/42 checks passed.
