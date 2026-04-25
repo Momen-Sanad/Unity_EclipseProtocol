@@ -16,6 +16,7 @@ namespace EclipseProtocol.AI
         private int _currentWaypointIndex;
 
         public IReadOnlyList<Transform> Waypoints => waypoints;
+        public GameBalanceData BalanceData => balanceData;
 
         private void Reset()
         {
