@@ -1,4 +1,5 @@
 using EclipseProtocol.Core;
+using Ilumisoft.HealthSystem;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -24,6 +25,7 @@ namespace EclipseProtocol.Player
         private bool _isDashing;
         private int _playerLayer = -1;
         private int _enemyLayer = -1;
+        private HealthComponent _healthComponent;
 
         public float CurrentHealth { get; private set; }
         public float CurrentEnergy { get; private set; }
@@ -64,6 +66,8 @@ namespace EclipseProtocol.Player
 
             _playerLayer = LayerMask.NameToLayer(playerLayerName);
             _enemyLayer = LayerMask.NameToLayer(enemyLayerName);
+
+            BindHealthComponent(GetComponent<HealthComponent>());
         }
 
         private void Update()
@@ -148,6 +152,13 @@ namespace EclipseProtocol.Player
             }
 
             CurrentHealth = Mathf.Max(0f, CurrentHealth - amount);
+            SyncHealthComponent();
+        }
+
+        public void BindHealthComponent(HealthComponent healthComponent)
+        {
+            _healthComponent = healthComponent;
+            SyncHealthComponent();
         }
 
         private void EndDash()
@@ -173,6 +184,17 @@ namespace EclipseProtocol.Player
             playerRigidbody.linearDamping = balanceData.playerDrag;
             playerRigidbody.angularDamping = balanceData.playerAngularDrag;
             playerRigidbody.constraints = RigidbodyConstraints.FreezeRotation;
+        }
+
+        private void SyncHealthComponent()
+        {
+            if (_healthComponent == null)
+            {
+                return;
+            }
+
+            _healthComponent.MaxHealth = MaxHealth;
+            _healthComponent.SetHealth(CurrentHealth);
         }
 
         private void ReadKeyboardInput()

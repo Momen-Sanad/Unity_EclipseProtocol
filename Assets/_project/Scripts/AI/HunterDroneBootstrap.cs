@@ -55,6 +55,7 @@ namespace EclipseProtocol.AI
 
             NavMeshAgent agent = hunter.AddComponent<NavMeshAgent>();
             HunterDroneAI hunterAI = hunter.AddComponent<HunterDroneAI>();
+            hunter.AddComponent<EnemyContactDamage>();
             hunterAI.Initialize(FindBalanceData(), player.transform);
 
             // Ensure the first destination is set even before first AI update tick.

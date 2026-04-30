@@ -32,8 +32,7 @@ namespace EclipseProtocol.UI
             }
 
             PlayerController playerController = GetComponent<PlayerController>();
-            health.MaxHealth = playerController.MaxHealth;
-            health.SetHealth(playerController.CurrentHealth);
+            playerController.BindHealthComponent(health);
 
             _healthbarInstance = Instantiate(healthbarPrefab, transform);
             _healthbarInstance.name = healthbarPrefab.name;
