@@ -144,6 +144,34 @@ namespace EclipseProtocol.Player
             CurrentEnergy = Mathf.Clamp(CurrentEnergy + amount, 0f, MaxEnergy);
         }
 
+        public void TeleportTo(Vector3 position, Quaternion rotation)
+        {
+            _moveInput = Vector2.zero;
+            _isDashing = false;
+            IsInvulnerable = false;
+            SetEnemyCollisionIgnored(false);
+
+            if (playerRigidbody == null)
+            {
+                playerRigidbody = GetComponent<Rigidbody>();
+            }
+
+            if (playerRigidbody != null)
+            {
+#if UNITY_6000_0_OR_NEWER
+                playerRigidbody.linearVelocity = Vector3.zero;
+#else
+                playerRigidbody.velocity = Vector3.zero;
+#endif
+                playerRigidbody.angularVelocity = Vector3.zero;
+                playerRigidbody.position = position;
+                playerRigidbody.rotation = rotation;
+            }
+
+            transform.SetPositionAndRotation(position, rotation);
+            Physics.SyncTransforms();
+        }
+
         public void TakeDamage(float amount)
         {
             if (IsInvulnerable || amount <= 0f)
