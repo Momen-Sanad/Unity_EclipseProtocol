@@ -6,7 +6,7 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
-    path: Assets/Scenes/Phase1_Sandbox.unity
+    path: Assets/Scenes/Gameplay.unity
     guid: bd6db0d34b5cc5f41be9884b098b4183
   - enabled: 1
     path: Assets/Scenes/SampleScene.unity
