@@ -1,4 +1,5 @@
 using EclipseProtocol.Core;
+using EclipseProtocol.Audio;
 using EclipseProtocol.Player;
 using UnityEngine;
 
@@ -29,6 +30,7 @@ namespace EclipseProtocol.World
             }
 
             playerController.RestoreEnergy(energyRestoreAmount);
+            AudioManager.Instance?.PlayPickup(transform.position);
             Debug.Log($"[EnergyCellPickup] Restored {energyRestoreAmount} energy to {other.name}.", this);
             gameObject.SetActive(false);
         }

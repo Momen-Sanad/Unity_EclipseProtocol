@@ -1,4 +1,5 @@
 using EclipseProtocol.Core;
+using EclipseProtocol.Audio;
 using Ilumisoft.HealthSystem;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -32,6 +33,8 @@ namespace EclipseProtocol.Player
         public float MaxHealth => balanceData != null ? balanceData.maxHealth : 100f;
         public float MaxEnergy => balanceData != null ? balanceData.maxEnergy : 100f;
         public float DashCooldownRemaining => Mathf.Max(0f, _dashCooldownTimer);
+        public float DashCooldownDuration => balanceData != null ? balanceData.dashCooldown : 8f;
+        public bool IsDashing => _isDashing;
         public bool IsInvulnerable { get; private set; }
 
         private void Reset()
@@ -136,6 +139,7 @@ namespace EclipseProtocol.Player
             _isDashing = true;
             IsInvulnerable = true;
             SetEnemyCollisionIgnored(true);
+            AudioManager.Instance?.PlayDash(transform.position);
             return true;
         }
 
@@ -151,7 +155,13 @@ namespace EclipseProtocol.Player
                 return;
             }
 
+            float previousHealth = CurrentHealth;
             CurrentHealth = Mathf.Max(0f, CurrentHealth - amount);
+            if (CurrentHealth < previousHealth)
+            {
+                AudioManager.Instance?.PlayDamage(transform.position);
+            }
+
             SyncHealthComponent();
         }
 
