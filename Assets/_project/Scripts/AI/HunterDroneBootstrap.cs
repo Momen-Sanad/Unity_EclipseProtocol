@@ -2,6 +2,7 @@ using EclipseProtocol.Core;
 using EclipseProtocol.Player;
 using UnityEngine;
 using UnityEngine.AI;
+using EclipseProtocol.World;
 
 namespace EclipseProtocol.AI
 {
@@ -23,10 +24,15 @@ namespace EclipseProtocol.AI
                 return;
             }
 
+            if (Object.FindAnyObjectByType<ProceduralLevelGenerator>() != null)
+            {
+                return;
+            }
+
             HunterDroneAI existingHunter = Object.FindAnyObjectByType<HunterDroneAI>();
             if (existingHunter != null)
             {
-                existingHunter.Initialize(FindBalanceData(), player.transform);
+                existingHunter.Initialize(FindBalanceData(), player.transform, null);
                 return;
             }
 
@@ -56,7 +62,7 @@ namespace EclipseProtocol.AI
             NavMeshAgent agent = hunter.AddComponent<NavMeshAgent>();
             HunterDroneAI hunterAI = hunter.AddComponent<HunterDroneAI>();
             hunter.AddComponent<EnemyContactDamage>();
-            hunterAI.Initialize(FindBalanceData(), player.transform);
+            hunterAI.Initialize(FindBalanceData(), player.transform, null);
 
             // Ensure the first destination is set even before first AI update tick.
             if (agent.isOnNavMesh)
