@@ -25,13 +25,18 @@ namespace EclipseProtocol.UI
         [SerializeField] private GameObject pauseOverlay;
 
         [Header("Bar Colors")]
-        [SerializeField] private Color healthColor = new Color(0.25f, 1f, 0.35f);
-        [SerializeField] private Color energyColor = new Color(0.2f, 0.78f, 1f);
-        [SerializeField] private Color dashCooldownColor = new Color(1f, 0.7f, 0.2f);
+        [SerializeField] private Color healthLowColor = new Color(1f, 0.1f, 0.08f);
+        [SerializeField] private Color healthMidColor = new Color(1f, 0.78f, 0.12f);
+        [SerializeField] private Color healthHighColor = new Color(0.25f, 1f, 0.35f);
+        [SerializeField] private Color energyLowColor = new Color(0.18f, 0.28f, 0.45f);
+        [SerializeField] private Color energyHighColor = new Color(0.2f, 0.78f, 1f);
+        [SerializeField] private Color dashEmptyColor = new Color(1f, 0.34f, 0.12f);
         [SerializeField] private Color dashReadyColor = new Color(0.35f, 1f, 0.45f);
-        [SerializeField] private Color repairColor = new Color(0.1f, 0.45f, 1f);
-        [SerializeField] private Color timerStartColor = new Color(0.25f, 0.9f, 1f);
-        [SerializeField] private Color timerEndColor = new Color(1f, 0.1f, 0.08f);
+        [SerializeField] private Color repairEmptyColor = new Color(0.05f, 0.16f, 0.42f);
+        [SerializeField] private Color repairFullColor = new Color(0.1f, 0.55f, 1f);
+        [SerializeField] private Color timerFullColor = new Color(0.25f, 0.9f, 1f);
+        [SerializeField] private Color timerMidColor = new Color(1f, 0.78f, 0.12f);
+        [SerializeField] private Color timerLowColor = new Color(1f, 0.1f, 0.08f);
 
         private PlayerController _player;
         private RunTimer _timer;
@@ -41,11 +46,11 @@ namespace EclipseProtocol.UI
 
         private void Awake()
         {
-            ConfigureFillImage(healthFill, healthColor);
-            ConfigureFillImage(energyFill, energyColor);
+            ConfigureFillImage(healthFill, healthHighColor);
+            ConfigureFillImage(energyFill, energyHighColor);
             ConfigureFillImage(dashCooldownFill, dashReadyColor);
-            ConfigureFillImage(repairProgressFill, repairColor);
-            ConfigureFillImage(timerFill, timerStartColor);
+            ConfigureFillImage(repairProgressFill, repairEmptyColor);
+            ConfigureFillImage(timerFill, timerFullColor);
             SetRepairProgress(0f, false);
             if (pauseOverlay != null)
             {
@@ -113,8 +118,9 @@ namespace EclipseProtocol.UI
 
             if (repairProgressFill != null)
             {
-                repairProgressFill.fillAmount = Mathf.Clamp01(normalizedProgress);
-                repairProgressFill.color = repairColor;
+                float repair01 = Mathf.Clamp01(normalizedProgress);
+                repairProgressFill.fillAmount = repair01;
+                repairProgressFill.color = Color.Lerp(repairEmptyColor, repairFullColor, repair01);
             }
         }
 
@@ -140,20 +146,22 @@ namespace EclipseProtocol.UI
 
             if (healthFill != null)
             {
-                healthFill.fillAmount = Mathf.Clamp01(health01);
-                healthFill.color = healthColor;
+                float clampedHealth = Mathf.Clamp01(health01);
+                healthFill.fillAmount = clampedHealth;
+                healthFill.color = EvaluateThreePointColor(clampedHealth, healthLowColor, healthMidColor, healthHighColor);
             }
 
             if (energyFill != null)
             {
-                energyFill.fillAmount = Mathf.Clamp01(energy01);
-                energyFill.color = energyColor;
+                float clampedEnergy = Mathf.Clamp01(energy01);
+                energyFill.fillAmount = clampedEnergy;
+                energyFill.color = Color.Lerp(energyLowColor, energyHighColor, clampedEnergy);
             }
 
             if (dashCooldownFill != null)
             {
                 dashCooldownFill.fillAmount = dashReady01;
-                dashCooldownFill.color = _player.DashCooldownRemaining > 0f ? dashCooldownColor : dashReadyColor;
+                dashCooldownFill.color = Color.Lerp(dashEmptyColor, dashReadyColor, dashReady01);
             }
 
             if (healthText != null)
@@ -185,7 +193,7 @@ namespace EclipseProtocol.UI
             {
                 float remaining01 = Mathf.Clamp01(_timer.NormalizedRemaining);
                 timerFill.fillAmount = remaining01;
-                timerFill.color = Color.Lerp(timerStartColor, timerEndColor, 1f - remaining01);
+                timerFill.color = EvaluateThreePointColor(remaining01, timerLowColor, timerMidColor, timerFullColor);
             }
 
             if (timerText != null)
@@ -224,6 +232,17 @@ namespace EclipseProtocol.UI
             image.fillClockwise = true;
             image.fillAmount = Mathf.Clamp01(image.fillAmount);
             image.color = color;
+        }
+
+        private static Color EvaluateThreePointColor(float value, Color low, Color mid, Color high)
+        {
+            float clampedValue = Mathf.Clamp01(value);
+            if (clampedValue < 0.5f)
+            {
+                return Color.Lerp(low, mid, clampedValue * 2f);
+            }
+
+            return Color.Lerp(mid, high, (clampedValue - 0.5f) * 2f);
         }
     }
 }
