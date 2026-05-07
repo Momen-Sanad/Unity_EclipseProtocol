@@ -15,6 +15,7 @@ namespace EclipseProtocol.World
         [SerializeField] private Light statusLight;
         [SerializeField] private DoorGate linkedDoor;
         [SerializeField, Min(0.1f)] private float fallbackRepairSeconds = 3f;
+        [SerializeField, Min(0.5f)] private float playerDetectionRadius = 2.25f;
         [SerializeField] private Color repairingColor = new Color(1f, 0.7f, 0.15f);
         [SerializeField] private Color repairedColor = new Color(0.2f, 1f, 0.75f);
 
@@ -22,6 +23,7 @@ namespace EclipseProtocol.World
         private HUDController _hudController;
         private MaterialPropertyBlock _statusPropertyBlock;
         private float _progressSeconds;
+        private bool _promptShown;
 
         public bool IsRepaired { get; private set; }
         public float Progress01 => RepairSeconds <= 0f ? 1f : Mathf.Clamp01(_progressSeconds / RepairSeconds);
@@ -46,8 +48,16 @@ namespace EclipseProtocol.World
 
         private void Update()
         {
+            RefreshPlayerPresence();
+
             if (IsRepaired || _playerInside == null)
             {
+                if (_playerInside == null && _progressSeconds > 0f)
+                {
+                    _progressSeconds = 0f;
+                    _hudController?.SetRepairProgress(0f, false);
+                }
+
                 return;
             }
 
@@ -83,25 +93,70 @@ namespace EclipseProtocol.World
 
         private void OnTriggerEnter(Collider other)
         {
-            if (!other.TryGetComponent(out PlayerController playerController))
-            {
-                return;
-            }
+            TrySetPlayer(other);
+        }
 
-            _playerInside = playerController;
-            _hudController?.ShowMessage("Hold E to repair power node", 2f);
-            _hudController?.SetRepairProgress(Progress01, !IsRepaired);
+        private void OnTriggerStay(Collider other)
+        {
+            TrySetPlayer(other);
         }
 
         private void OnTriggerExit(Collider other)
         {
-            if (_playerInside == null || !other.TryGetComponent(out PlayerController playerController) || playerController != _playerInside)
+            PlayerController playerController = other.GetComponentInParent<PlayerController>();
+            if (_playerInside == null || playerController == null || playerController != _playerInside)
             {
                 return;
             }
 
             _playerInside = null;
+            _promptShown = false;
             _hudController?.SetRepairProgress(0f, false);
+        }
+
+        private void RefreshPlayerPresence()
+        {
+            if (_playerInside != null)
+            {
+                float sqrRange = playerDetectionRadius * playerDetectionRadius;
+                if ((_playerInside.transform.position - transform.position).sqrMagnitude <= sqrRange)
+                {
+                    return;
+                }
+
+                _playerInside = null;
+                _promptShown = false;
+                _hudController?.SetRepairProgress(0f, false);
+                return;
+            }
+
+            Collider[] hits = Physics.OverlapSphere(transform.position, playerDetectionRadius, ~0, QueryTriggerInteraction.Collide);
+            for (int i = 0; i < hits.Length; i++)
+            {
+                if (TrySetPlayer(hits[i]))
+                {
+                    return;
+                }
+            }
+        }
+
+        private bool TrySetPlayer(Collider other)
+        {
+            PlayerController playerController = other.GetComponentInParent<PlayerController>();
+            if (playerController == null)
+            {
+                return false;
+            }
+
+            _playerInside = playerController;
+            if (!_promptShown)
+            {
+                _promptShown = true;
+                _hudController?.ShowMessage("Hold E to repair power node", 2f);
+            }
+
+            _hudController?.SetRepairProgress(Progress01, !IsRepaired);
+            return true;
         }
 
         private void CompleteRepair()

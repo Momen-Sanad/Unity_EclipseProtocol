@@ -36,6 +36,7 @@ namespace EclipseProtocol.World
         [SerializeField, Min(2f)] private float doorHeight = 3.2f;
         [SerializeField, Min(0.1f)] private float doorThickness = 0.35f;
         [SerializeField, Min(1f)] private float doorSlideHeight = 3.6f;
+        [SerializeField] private Color sealedDoorColor = new Color(0.18f, 0.22f, 0.28f);
 
         private readonly List<RoomModule> _spawnedRooms = new List<RoomModule>();
         private readonly List<Bounds> _occupiedBounds = new List<Bounds>();
@@ -99,6 +100,7 @@ namespace EclipseProtocol.World
 
             RebuildNavMesh();
             SpawnPlayer(startRoom);
+            SpawnStartRoomBackstop(startRoom);
             SpawnProgressionDoors();
             SpawnRepairNodes(nodeRoom);
             SpawnExtraction(extractionRoom);
@@ -324,6 +326,37 @@ namespace EclipseProtocol.World
             DoorGate gate = gateObject.AddComponent<DoorGate>();
             gate.Configure(panelObject.transform, panelObject.GetComponent<Collider>(), trigger, obstacle, doorSlideHeight);
             return gate;
+        }
+
+        private void SpawnStartRoomBackstop(RoomModule startRoom)
+        {
+            if (startRoom == null || startRoom.EntryAnchor == null)
+            {
+                return;
+            }
+
+            Transform entryAnchor = startRoom.EntryAnchor.transform;
+            GameObject backstop = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            backstop.name = "StartRoomSealedBackstop";
+            backstop.transform.SetParent(levelRoot, false);
+            backstop.transform.SetPositionAndRotation(entryAnchor.position + Vector3.up * (doorHeight * 0.5f), entryAnchor.rotation);
+            backstop.transform.localScale = new Vector3(doorWidth, doorHeight, doorThickness);
+
+            Renderer renderer = backstop.GetComponent<Renderer>();
+            if (renderer != null)
+            {
+                MaterialPropertyBlock propertyBlock = new MaterialPropertyBlock();
+                renderer.GetPropertyBlock(propertyBlock);
+                propertyBlock.SetColor("_BaseColor", sealedDoorColor);
+                propertyBlock.SetColor("_Color", sealedDoorColor);
+                renderer.SetPropertyBlock(propertyBlock);
+            }
+
+            NavMeshObstacle obstacle = backstop.AddComponent<NavMeshObstacle>();
+            obstacle.shape = NavMeshObstacleShape.Box;
+            obstacle.carving = true;
+            obstacle.size = new Vector3(doorWidth, doorHeight, doorThickness);
+            obstacle.center = Vector3.zero;
         }
 
         private void SpawnRepairNodes(RoomModule fallbackNodeRoom)
