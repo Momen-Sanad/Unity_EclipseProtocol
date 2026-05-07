@@ -26,4 +26,20 @@ MonoBehaviour:
   droneAcceleration: 8
   droneStoppingDistance: 0.2
   droneDetectionRadius: 8
+  runTimerSeconds: 180
+  corridorRoomCount: 2
+  maxPlacementAttempts: 8
+  roomOverlapPadding: 0.25
+  repairHoldSeconds: 3
+  lockedExtractionMessageSeconds: 2
+  hunterAttackRange: 2.25
+  hunterWindupSeconds: 0.45
+  hunterLungeSeconds: 0.45
+  hunterLungeSpeed: 11
+  hunterAttackCooldown: 1.75
+  hunterDamage: 15
+  corridorEnergyCellChance: 0.8
+  corridorPatrolDroneChance: 0.75
+  maxPatrolDrones: 2
+  maxEnergyCells: 3
   energyCellRestoreAmount: 25
