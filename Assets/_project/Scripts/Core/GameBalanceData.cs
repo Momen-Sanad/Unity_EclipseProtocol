@@ -14,6 +14,8 @@ namespace EclipseProtocol.Core
 
         [Header("Player Movement")]
         [Min(0.1f)] public float movementSpeed = 6.5f;
+        [Min(0.1f)] public float jumpVelocity = 7.5f;
+        [Min(0.05f)] public float groundedRayDistance = 1.15f;
         [Min(0.1f)] public float dashSpeed = 14f;
         [Min(0.1f)] public float dashDuration = 1f;
         [Min(0f)] public float dashCooldown = 8f;

@@ -1,3 +1,4 @@
+using EclipseProtocol.Core;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
@@ -33,6 +34,7 @@ namespace EclipseProtocol.UI
         public void Retry()
         {
             Time.timeScale = 1f;
+            RunSeedData.UseRandomSeed();
             SceneManager.LoadScene(gameplaySceneName);
         }
     }

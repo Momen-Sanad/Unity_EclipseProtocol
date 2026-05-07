@@ -80,6 +80,16 @@ namespace EclipseProtocol.UI
             _messageTimer = duration;
         }
 
+        public void ShowEnergyGain(float amount)
+        {
+            if (amount <= 0f)
+            {
+                return;
+            }
+
+            ShowMessage($"+{Mathf.CeilToInt(amount)}", 1.2f);
+        }
+
         public void SetRepairProgress(float normalizedProgress, bool visible)
         {
             if (repairProgressRoot != null)
@@ -134,14 +144,14 @@ namespace EclipseProtocol.UI
 
             if (energyText != null)
             {
-                energyText.text = $"EN {Mathf.CeilToInt(_player.CurrentEnergy)}/{Mathf.CeilToInt(_player.MaxEnergy)}";
+                energyText.text = $"Energy {Mathf.CeilToInt(_player.CurrentEnergy)}/{Mathf.CeilToInt(_player.MaxEnergy)}";
             }
 
             if (dashText != null)
             {
                 dashText.text = _player.DashCooldownRemaining > 0f
-                    ? $"Dash {Mathf.CeilToInt(_player.DashCooldownRemaining)}s"
-                    : "Dash Ready";
+                    ? $"Shift Dash {Mathf.CeilToInt(_player.DashCooldownRemaining)}s"
+                    : "Shift Dash Ready";
             }
         }
 

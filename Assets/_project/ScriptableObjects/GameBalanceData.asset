@@ -15,6 +15,8 @@ MonoBehaviour:
   maxHealth: 100
   maxEnergy: 100
   movementSpeed: 6.5
+  jumpVelocity: 7.5
+  groundedRayDistance: 1.15
   dashSpeed: 14
   dashDuration: 1
   dashCooldown: 8

@@ -3,24 +3,48 @@ namespace EclipseProtocol.Core
     public static class RunSeedData
     {
         public static bool HasSeed { get; private set; }
+        public static bool HasUserSeed { get; private set; }
         public static string SeedText { get; private set; } = string.Empty;
         public static int Seed { get; private set; }
 
         public static void SetSeed(string seedText)
         {
             SeedText = seedText != null ? seedText.Trim() : string.Empty;
-            HasSeed = !string.IsNullOrEmpty(SeedText);
-            Seed = HasSeed ? BuildStableSeed(SeedText) : System.Environment.TickCount;
+            HasUserSeed = !string.IsNullOrEmpty(SeedText);
+            if (!HasUserSeed)
+            {
+                UseRandomSeed();
+                return;
+            }
+
+            HasSeed = true;
+            Seed = BuildStableSeed(SeedText);
+        }
+
+        public static void UseRandomSeed()
+        {
+            SeedText = string.Empty;
+            HasSeed = true;
+            HasUserSeed = false;
+            Seed = BuildRandomSeed();
         }
 
         public static int GetOrCreateSeed()
         {
             if (!HasSeed)
             {
-                Seed = System.Environment.TickCount;
+                UseRandomSeed();
             }
 
             return Seed;
+        }
+
+        private static int BuildRandomSeed()
+        {
+            unchecked
+            {
+                return System.Environment.TickCount ^ System.Guid.NewGuid().GetHashCode();
+            }
         }
 
         private static int BuildStableSeed(string text)

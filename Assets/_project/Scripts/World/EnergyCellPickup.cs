@@ -1,6 +1,7 @@
 using EclipseProtocol.Core;
 using EclipseProtocol.Audio;
 using EclipseProtocol.Player;
+using EclipseProtocol.UI;
 using UnityEngine;
 
 namespace EclipseProtocol.World
@@ -29,9 +30,10 @@ namespace EclipseProtocol.World
                 return;
             }
 
-            playerController.RestoreEnergy(energyRestoreAmount);
+            float restoredEnergy = playerController.RestoreEnergy(energyRestoreAmount);
+            FindAnyObjectByType<HUDController>()?.ShowEnergyGain(restoredEnergy);
             AudioManager.Instance?.PlayPickup(transform.position);
-            Debug.Log($"[EnergyCellPickup] Restored {energyRestoreAmount} energy to {other.name}.", this);
+            Debug.Log($"[EnergyCellPickup] Restored {restoredEnergy} energy to {other.name}.", this);
             gameObject.SetActive(false);
         }
     }
