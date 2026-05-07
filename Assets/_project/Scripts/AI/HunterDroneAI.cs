@@ -38,6 +38,7 @@ namespace EclipseProtocol.AI
         private HunterState _state = HunterState.Idle;
         private Vector3 _homePosition;
         private Vector3 _lungeDirection;
+        private MaterialPropertyBlock _statePropertyBlock;
         private float _stateTimer;
         private float _repathTimer;
         private float _nextAttackTime;
@@ -242,49 +243,71 @@ namespace EclipseProtocol.AI
         {
             _state = nextState;
             _contactDamage?.SetDamageEnabled(nextState == HunterState.Lunge);
+            bool canUseAgent = navMeshAgent != null && navMeshAgent.isActiveAndEnabled && navMeshAgent.isOnNavMesh;
 
             switch (_state)
             {
                 case HunterState.Idle:
-                    navMeshAgent.isStopped = true;
+                    if (canUseAgent)
+                    {
+                        navMeshAgent.isStopped = true;
+                    }
                     SetStateColor(patrolColor);
                     break;
                 case HunterState.Patrol:
-                    navMeshAgent.isStopped = false;
+                    if (canUseAgent)
+                    {
+                        navMeshAgent.isStopped = false;
+                    }
                     SetStateColor(patrolColor);
-                    if (patrolPoints.Count > 0)
+                    if (canUseAgent && patrolPoints.Count > 0)
                     {
                         navMeshAgent.SetDestination(patrolPoints[_patrolIndex].position);
                     }
                     break;
                 case HunterState.Chase:
-                    navMeshAgent.isStopped = false;
+                    if (canUseAgent)
+                    {
+                        navMeshAgent.isStopped = false;
+                    }
                     _repathTimer = 0f;
                     SetStateColor(chaseColor);
                     break;
                 case HunterState.WindUp:
-                    navMeshAgent.ResetPath();
-                    navMeshAgent.isStopped = true;
+                    if (canUseAgent)
+                    {
+                        navMeshAgent.ResetPath();
+                        navMeshAgent.isStopped = true;
+                    }
                     _stateTimer = WindupSeconds;
                     SetStateColor(attackColor);
                     AudioManager.Instance?.PlayWarning(transform.position);
                     break;
                 case HunterState.Lunge:
-                    navMeshAgent.isStopped = false;
+                    if (canUseAgent)
+                    {
+                        navMeshAgent.isStopped = false;
+                    }
                     _stateTimer = LungeSeconds;
                     _nextAttackTime = Time.time + AttackCooldown;
                     SetStateColor(attackColor);
                     AudioManager.Instance?.PlayLunge(transform.position);
                     break;
                 case HunterState.Recover:
-                    navMeshAgent.ResetPath();
-                    navMeshAgent.isStopped = true;
+                    if (canUseAgent)
+                    {
+                        navMeshAgent.ResetPath();
+                        navMeshAgent.isStopped = true;
+                    }
                     _stateTimer = 0.25f;
                     SetStateColor(chaseColor);
                     break;
                 case HunterState.Return:
-                    navMeshAgent.isStopped = false;
-                    navMeshAgent.SetDestination(patrolPoints.Count > 0 ? patrolPoints[_patrolIndex].position : _homePosition);
+                    if (canUseAgent)
+                    {
+                        navMeshAgent.isStopped = false;
+                        navMeshAgent.SetDestination(patrolPoints.Count > 0 ? patrolPoints[_patrolIndex].position : _homePosition);
+                    }
                     SetStateColor(patrolColor);
                     break;
             }
@@ -294,7 +317,11 @@ namespace EclipseProtocol.AI
         {
             if (stateRenderer != null)
             {
-                stateRenderer.material.color = color;
+                _statePropertyBlock ??= new MaterialPropertyBlock();
+                stateRenderer.GetPropertyBlock(_statePropertyBlock);
+                _statePropertyBlock.SetColor("_BaseColor", color);
+                _statePropertyBlock.SetColor("_Color", color);
+                stateRenderer.SetPropertyBlock(_statePropertyBlock);
             }
         }
 

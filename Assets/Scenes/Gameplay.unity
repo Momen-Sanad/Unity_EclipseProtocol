@@ -390,18 +390,23 @@ MonoBehaviour:
   generateOnStart: 1
   levelRoot: {fileID: 0}
   navMeshSurface: {fileID: 1405155289}
-  startRoomPrefab: {fileID: 0}
+  startRoomPrefab: {fileID: 6597188632330086662, guid: f952ad9a2d3bd6240b167a2f56c5d5e5, type: 3}
   corridorRoomPrefabs:
-  - {fileID: 0}
-  - {fileID: 0}
-  nodeRoomPrefab: {fileID: 0}
-  extractionRoomPrefab: {fileID: 0}
+  - {fileID: 6175137456733399369, guid: 89e0cea205c61454790237ad6a3c5f27, type: 3}
+  - {fileID: 6595017316343634275, guid: e8eaee55d556fba4290d8769940bfe8c, type: 3}
+  nodeRoomPrefab: {fileID: 7754518139297107534, guid: 3afcda54bdb2843448abe91f8beca24d, type: 3}
+  extractionRoomPrefab: {fileID: 5455430356914883407, guid: ada9aa565fe429744869878ee72b6b1f, type: 3}
   playerPrefab: {fileID: 1709142106429520610, guid: 89be28616a2efa94da9d5a4ed70cb09d, type: 3}
   patrolDronePrefab: {fileID: 3762304041491781434, guid: 0681b611293d4d14299c21460544c62c, type: 3}
   hunterDronePrefab: {fileID: 4817545057441431211, guid: 8777b330fe2ecbd4a968e8cb1df67c8d, type: 3}
   energyCellPrefab: {fileID: 1384865193357652179, guid: 817ad542590de134297b5aec8dd40b86, type: 3}
-  repairNodePrefab: {fileID: 0}
-  extractionTriggerPrefab: {fileID: 0}
+  repairNodePrefab: {fileID: 5422232061630063986, guid: 84acec13a61a39b4396a870d3363d15c, type: 3}
+  extractionTriggerPrefab: {fileID: 3163633786287060862, guid: 41c37194176b76b46b8f5e299bbd22cd, type: 3}
+  requireRepairPerRoom: 1
+  doorWidth: 5
+  doorHeight: 3.2
+  doorThickness: 0.35
+  doorSlideHeight: 3.6
 --- !u!114 &411389487
 MonoBehaviour:
   m_ObjectHideFlags: 0

@@ -13,6 +13,8 @@ namespace EclipseProtocol.World
         [SerializeField] private Color lockedColor = new Color(1f, 0.35f, 0.15f);
         [SerializeField] private Color unlockedColor = new Color(0.25f, 0.85f, 1f);
 
+        private MaterialPropertyBlock _statusPropertyBlock;
+
         public bool IsLocked { get; private set; }
 
         private void Awake()
@@ -33,7 +35,11 @@ namespace EclipseProtocol.World
             IsLocked = isLocked;
             if (statusRenderer != null)
             {
-                statusRenderer.material.color = IsLocked ? lockedColor : unlockedColor;
+                _statusPropertyBlock ??= new MaterialPropertyBlock();
+                statusRenderer.GetPropertyBlock(_statusPropertyBlock);
+                _statusPropertyBlock.SetColor("_BaseColor", IsLocked ? lockedColor : unlockedColor);
+                _statusPropertyBlock.SetColor("_Color", IsLocked ? lockedColor : unlockedColor);
+                statusRenderer.SetPropertyBlock(_statusPropertyBlock);
             }
         }
 

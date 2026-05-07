@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using EclipseProtocol.Audio;
 using EclipseProtocol.Player;
 using EclipseProtocol.UI;
@@ -15,6 +16,8 @@ namespace EclipseProtocol.Core
         [SerializeField] private RunTimer runTimer;
 
         private PlayerController _player;
+        private readonly HashSet<RepairNode> _repairNodes = new HashSet<RepairNode>();
+        private readonly HashSet<RepairNode> _repairedNodes = new HashSet<RepairNode>();
         private bool _endingRun;
 
         public static GameStateManager Instance { get; private set; }
@@ -46,7 +49,14 @@ namespace EclipseProtocol.Core
             }
 
             RegisterTimer(runTimer);
-            hudController?.SetObjective("Repair the power node");
+            if (_repairNodes.Count > 0)
+            {
+                UpdateRepairObjective();
+            }
+            else
+            {
+                hudController?.SetObjective("Repair the power node");
+            }
         }
 
         private void Update()
@@ -66,6 +76,24 @@ namespace EclipseProtocol.Core
         {
             _player = player;
             hudController?.SetPlayer(player);
+        }
+
+        public void ResetRunObjectives()
+        {
+            IsPowerRepaired = false;
+            _repairNodes.Clear();
+            _repairedNodes.Clear();
+            hudController?.SetObjective("Repair node 1");
+        }
+
+        public void RegisterRepairNode(RepairNode repairNode)
+        {
+            if (repairNode == null || !_repairNodes.Add(repairNode))
+            {
+                return;
+            }
+
+            UpdateRepairObjective();
         }
 
         public void RegisterTimer(RunTimer timer)
@@ -92,15 +120,35 @@ namespace EclipseProtocol.Core
                 return;
             }
 
+            if (repairNode != null)
+            {
+                _repairNodes.Add(repairNode);
+                _repairedNodes.Add(repairNode);
+            }
+
+            if (_repairNodes.Count > 0 && _repairedNodes.Count < _repairNodes.Count)
+            {
+                UpdateRepairObjective();
+                hudController?.ShowMessage("Door unlocked. Move forward.", 2f);
+                return;
+            }
+
             IsPowerRepaired = true;
             hudController?.SetObjective("Reach extraction");
-            hudController?.ShowMessage("Power restored. Extraction unlocked.", 2.5f);
+            hudController?.ShowMessage("All nodes repaired. Extraction unlocked.", 2.5f);
 
             ExtractionTrigger[] extractionTriggers = FindObjectsByType<ExtractionTrigger>();
             for (int i = 0; i < extractionTriggers.Length; i++)
             {
                 extractionTriggers[i].SetLocked(false);
             }
+        }
+
+        private void UpdateRepairObjective()
+        {
+            int total = Mathf.Max(1, _repairNodes.Count);
+            int nextNode = Mathf.Clamp(_repairedNodes.Count + 1, 1, total);
+            hudController?.SetObjective($"Repair node {nextNode}/{total}");
         }
 
         public void TryCompleteExtraction()

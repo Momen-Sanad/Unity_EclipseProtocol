@@ -13,12 +13,14 @@ namespace EclipseProtocol.World
         [SerializeField] private GameBalanceData balanceData;
         [SerializeField] private Renderer statusRenderer;
         [SerializeField] private Light statusLight;
+        [SerializeField] private DoorGate linkedDoor;
         [SerializeField, Min(0.1f)] private float fallbackRepairSeconds = 3f;
         [SerializeField] private Color repairingColor = new Color(1f, 0.7f, 0.15f);
         [SerializeField] private Color repairedColor = new Color(0.2f, 1f, 0.75f);
 
         private PlayerController _playerInside;
         private HUDController _hudController;
+        private MaterialPropertyBlock _statusPropertyBlock;
         private float _progressSeconds;
 
         public bool IsRepaired { get; private set; }
@@ -68,9 +70,15 @@ namespace EclipseProtocol.World
             }
         }
 
-        public void Configure(GameBalanceData data)
+        public void Configure(GameBalanceData data, DoorGate doorGate = null)
         {
             balanceData = data;
+            linkedDoor = doorGate;
+        }
+
+        public void SetLinkedDoor(DoorGate doorGate)
+        {
+            linkedDoor = doorGate;
         }
 
         private void OnTriggerEnter(Collider other)
@@ -102,6 +110,7 @@ namespace EclipseProtocol.World
             _progressSeconds = RepairSeconds;
             SetStatusColor(repairedColor);
             _hudController?.SetRepairProgress(1f, false);
+            linkedDoor?.UnlockAndOpen();
             AudioManager.Instance?.PlayRepairComplete(transform.position);
             GameStateManager.Instance?.MarkPowerRepaired(this);
         }
@@ -110,7 +119,11 @@ namespace EclipseProtocol.World
         {
             if (statusRenderer != null)
             {
-                statusRenderer.material.color = color;
+                _statusPropertyBlock ??= new MaterialPropertyBlock();
+                statusRenderer.GetPropertyBlock(_statusPropertyBlock);
+                _statusPropertyBlock.SetColor("_BaseColor", color);
+                _statusPropertyBlock.SetColor("_Color", color);
+                statusRenderer.SetPropertyBlock(_statusPropertyBlock);
             }
 
             if (statusLight != null)
