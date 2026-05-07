@@ -24,6 +24,15 @@ namespace EclipseProtocol.UI
         [SerializeField] private GameObject repairProgressRoot;
         [SerializeField] private GameObject pauseOverlay;
 
+        [Header("Bar Colors")]
+        [SerializeField] private Color healthColor = new Color(0.25f, 1f, 0.35f);
+        [SerializeField] private Color energyColor = new Color(0.2f, 0.78f, 1f);
+        [SerializeField] private Color dashCooldownColor = new Color(1f, 0.7f, 0.2f);
+        [SerializeField] private Color dashReadyColor = new Color(0.35f, 1f, 0.45f);
+        [SerializeField] private Color repairColor = new Color(0.1f, 0.45f, 1f);
+        [SerializeField] private Color timerStartColor = new Color(0.25f, 0.9f, 1f);
+        [SerializeField] private Color timerEndColor = new Color(1f, 0.1f, 0.08f);
+
         private PlayerController _player;
         private RunTimer _timer;
         private float _messageTimer;
@@ -32,6 +41,11 @@ namespace EclipseProtocol.UI
 
         private void Awake()
         {
+            ConfigureFillImage(healthFill, healthColor);
+            ConfigureFillImage(energyFill, energyColor);
+            ConfigureFillImage(dashCooldownFill, dashReadyColor);
+            ConfigureFillImage(repairProgressFill, repairColor);
+            ConfigureFillImage(timerFill, timerStartColor);
             SetRepairProgress(0f, false);
             if (pauseOverlay != null)
             {
@@ -100,6 +114,7 @@ namespace EclipseProtocol.UI
             if (repairProgressFill != null)
             {
                 repairProgressFill.fillAmount = Mathf.Clamp01(normalizedProgress);
+                repairProgressFill.color = repairColor;
             }
         }
 
@@ -120,21 +135,25 @@ namespace EclipseProtocol.UI
 
             float health01 = _player.MaxHealth <= 0f ? 0f : _player.CurrentHealth / _player.MaxHealth;
             float energy01 = _player.MaxEnergy <= 0f ? 0f : _player.CurrentEnergy / _player.MaxEnergy;
-            float dash01 = _player.DashCooldownDuration <= 0f ? 0f : _player.DashCooldownRemaining / _player.DashCooldownDuration;
+            float dashCooldown01 = _player.DashCooldownDuration <= 0f ? 0f : _player.DashCooldownRemaining / _player.DashCooldownDuration;
+            float dashReady01 = 1f - Mathf.Clamp01(dashCooldown01);
 
             if (healthFill != null)
             {
                 healthFill.fillAmount = Mathf.Clamp01(health01);
+                healthFill.color = healthColor;
             }
 
             if (energyFill != null)
             {
                 energyFill.fillAmount = Mathf.Clamp01(energy01);
+                energyFill.color = energyColor;
             }
 
             if (dashCooldownFill != null)
             {
-                dashCooldownFill.fillAmount = Mathf.Clamp01(dash01);
+                dashCooldownFill.fillAmount = dashReady01;
+                dashCooldownFill.color = _player.DashCooldownRemaining > 0f ? dashCooldownColor : dashReadyColor;
             }
 
             if (healthText != null)
@@ -164,7 +183,9 @@ namespace EclipseProtocol.UI
 
             if (timerFill != null)
             {
-                timerFill.fillAmount = _timer.NormalizedRemaining;
+                float remaining01 = Mathf.Clamp01(_timer.NormalizedRemaining);
+                timerFill.fillAmount = remaining01;
+                timerFill.color = Color.Lerp(timerStartColor, timerEndColor, 1f - remaining01);
             }
 
             if (timerText != null)
@@ -188,6 +209,21 @@ namespace EclipseProtocol.UI
             {
                 messageText.text = string.Empty;
             }
+        }
+
+        private static void ConfigureFillImage(Image image, Color color)
+        {
+            if (image == null)
+            {
+                return;
+            }
+
+            image.type = Image.Type.Filled;
+            image.fillMethod = Image.FillMethod.Horizontal;
+            image.fillOrigin = (int)Image.OriginHorizontal.Left;
+            image.fillClockwise = true;
+            image.fillAmount = Mathf.Clamp01(image.fillAmount);
+            image.color = color;
         }
     }
 }
