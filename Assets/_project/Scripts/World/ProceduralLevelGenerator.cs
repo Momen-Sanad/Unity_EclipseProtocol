@@ -57,6 +57,14 @@ namespace EclipseProtocol.World
         [SerializeField, Min(0)] private int minObstaclesPerRoom = 1;
         [SerializeField, Min(0)] private int maxObstaclesPerRoom = 5;
 
+        [Header("Guiding Lines")]
+        [SerializeField] private Color guideLineColor = new Color(1f, 0.78f, 0.08f);
+        [SerializeField, Min(0.05f)] private float guideLineWidth = 0.18f;
+        [SerializeField, Min(0.01f)] private float guideLineHeight = 0.04f;
+        [SerializeField, Min(0f)] private float guideLineFloorOffset = 0.02f;
+        [SerializeField, Min(0.25f)] private float guideLineLaneOffset = 1.6f;
+        [SerializeField, Min(0.5f)] private float guideLineDoorInset = 1.2f;
+
         [Header("Enemy Mix")]
         [SerializeField, Min(1)] private int firstHunterRoomNumber = 3;
         [SerializeField, Range(0f, 1f)] private float hunterChanceFirstEligibleRoom = 0.2f;
@@ -132,6 +140,7 @@ namespace EclipseProtocol.World
             BuildRoomPlan();
             BuildRoomGeometry();
             RebuildNavMesh();
+            BuildGuidingLines();
             SpawnProgressionDoors();
             SpawnPlayer();
             SpawnRoomContent();
@@ -386,6 +395,111 @@ namespace EclipseProtocol.World
             }
 
             navMeshSurface?.BuildNavMesh();
+        }
+
+        private void BuildGuidingLines()
+        {
+            for (int i = 0; i < _generatedRooms.Count; i++)
+            {
+                CreateGuidingLines(_generatedRooms[i]);
+            }
+        }
+
+        private void CreateGuidingLines(GeneratedRoom room)
+        {
+            List<Vector3> route = BuildGuideRoute(room);
+            for (int i = 0; i < route.Count - 1; i++)
+            {
+                Vector3 start = route[i];
+                Vector3 end = route[i + 1];
+                Vector3 delta = end - start;
+                delta.y = 0f;
+                if (delta.sqrMagnitude < 0.25f)
+                {
+                    continue;
+                }
+
+                Vector3 direction = delta.normalized;
+                Vector3 lateral = new Vector3(-direction.z, 0f, direction.x);
+                CreateGuideLineSegment(room, start + lateral * guideLineLaneOffset, end + lateral * guideLineLaneOffset, i, "A");
+                CreateGuideLineSegment(room, start - lateral * guideLineLaneOffset, end - lateral * guideLineLaneOffset, i, "B");
+            }
+        }
+
+        private List<Vector3> BuildGuideRoute(GeneratedRoom room)
+        {
+            List<Vector3> route = new List<Vector3>();
+            if (room.EntryDirection != Vector2Int.zero)
+            {
+                route.Add(GetGuideDoorPoint(room, room.EntryDirection));
+            }
+            else if (room.ExitDirection != Vector2Int.zero)
+            {
+                route.Add(GetGuideInteriorPoint(room, -room.ExitDirection));
+            }
+            else
+            {
+                route.Add(room.Center);
+            }
+
+            bool turnsThroughCenter = room.EntryDirection != Vector2Int.zero
+                && room.ExitDirection != Vector2Int.zero
+                && room.EntryDirection + room.ExitDirection != Vector2Int.zero;
+            if (turnsThroughCenter)
+            {
+                route.Add(room.Center);
+            }
+
+            if (room.ExitDirection != Vector2Int.zero)
+            {
+                route.Add(GetGuideDoorPoint(room, room.ExitDirection));
+            }
+            else if (room.EntryDirection != Vector2Int.zero)
+            {
+                route.Add(GetGuideInteriorPoint(room, -room.EntryDirection));
+            }
+
+            return route;
+        }
+
+        private Vector3 GetGuideDoorPoint(GeneratedRoom room, Vector2Int direction)
+        {
+            Vector3 point = room.Center + DirectionToVector(direction) * Mathf.Max(0.5f, SideDistance(room, direction) - guideLineDoorInset);
+            point.y = 0f;
+            return point;
+        }
+
+        private Vector3 GetGuideInteriorPoint(GeneratedRoom room, Vector2Int direction)
+        {
+            float distance = Mathf.Min(4f, Mathf.Max(0.5f, SideDistance(room, direction) - guideLineDoorInset));
+            Vector3 point = room.Center + DirectionToVector(direction) * distance;
+            point.y = 0f;
+            return point;
+        }
+
+        private void CreateGuideLineSegment(GeneratedRoom room, Vector3 start, Vector3 end, int segmentIndex, string side)
+        {
+            Vector3 delta = end - start;
+            delta.y = 0f;
+            float length = delta.magnitude;
+            if (length <= 0.05f)
+            {
+                return;
+            }
+
+            GameObject stripe = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            stripe.name = $"GuideLine_{segmentIndex + 1:00}_{side}";
+            stripe.transform.SetParent(room.Root.transform, false);
+            stripe.transform.position = (start + end) * 0.5f + Vector3.up * (guideLineFloorOffset + guideLineHeight * 0.5f);
+            stripe.transform.rotation = Quaternion.LookRotation(delta.normalized, Vector3.up);
+            stripe.transform.localScale = new Vector3(guideLineWidth, guideLineHeight, length);
+            Collider stripeCollider = stripe.GetComponent<Collider>();
+            if (stripeCollider != null)
+            {
+                stripeCollider.enabled = false;
+            }
+
+            Tint(stripe, guideLineColor);
         }
 
         private void SpawnProgressionDoors()
