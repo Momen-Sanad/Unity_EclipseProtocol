@@ -8,33 +8,35 @@ namespace EclipseProtocol.UI
     public class MenuController : MonoBehaviour
     {
         [SerializeField] private InputField seedInputField;
-        [SerializeField] private Button startButton;
-        [SerializeField] private Button quitButton;
-        [SerializeField] private string gameplaySceneName = "Gameplay";
+        [SerializeField] private Button backButton;
+        [SerializeField] private string startScreenSceneName = "Start_Screen";
 
         private void Awake()
         {
-            if (startButton != null)
+            if (seedInputField != null)
             {
-                startButton.onClick.AddListener(StartGame);
+                seedInputField.text = RunSeedData.SeedText;
             }
 
-            if (quitButton != null)
+            if (backButton != null)
             {
-                quitButton.onClick.AddListener(QuitGame);
+                backButton.onClick.AddListener(ReturnToStartScreen);
             }
         }
 
-        public void StartGame()
+        private void OnDestroy()
         {
-            RunSeedData.SetSeed(seedInputField != null ? seedInputField.text : string.Empty);
+            if (backButton != null)
+            {
+                backButton.onClick.RemoveListener(ReturnToStartScreen);
+            }
+        }
+
+        public void ReturnToStartScreen()
+        {
+            RunSeedData.SetSeed(seedInputField != null ? seedInputField.text : RunSeedData.SeedText);
             Time.timeScale = 1f;
-            SceneManager.LoadScene(gameplaySceneName);
-        }
-
-        public void QuitGame()
-        {
-            Application.Quit();
+            SceneManager.LoadScene(startScreenSceneName);
         }
     }
 }
