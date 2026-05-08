@@ -57,6 +57,12 @@ namespace EclipseProtocol.World
         [SerializeField, Min(0)] private int minObstaclesPerRoom = 1;
         [SerializeField, Min(0)] private int maxObstaclesPerRoom = 5;
 
+        [Header("Enemy Mix")]
+        [SerializeField, Min(1)] private int firstHunterRoomNumber = 3;
+        [SerializeField, Range(0f, 1f)] private float hunterChanceFirstEligibleRoom = 0.2f;
+        [SerializeField, Range(0f, 1f)] private float hunterChanceLastRoom = 0.55f;
+        [SerializeField] private bool guaranteeHunterByFinalRoom = true;
+
         [Header("Runtime Progression")]
         [SerializeField] private bool requireRepairPerRoom = true;
         [SerializeField, Min(2f)] private float doorWidth = 5f;
@@ -84,6 +90,7 @@ namespace EclipseProtocol.World
         private PlayerController _player;
         private RoomExplorationBlackoutController _blackoutController;
         private int _enemyCount;
+        private int _hunterCount;
         private int _energyCellCount;
         private int _repairNodeCount;
 
@@ -113,6 +120,7 @@ namespace EclipseProtocol.World
             _progressionDoors.Clear();
             _roomDebugSummaries.Clear();
             _enemyCount = 0;
+            _hunterCount = 0;
             _energyCellCount = 0;
             _repairNodeCount = 0;
             _blackoutController = null;
@@ -130,7 +138,7 @@ namespace EclipseProtocol.World
             SpawnExtraction();
             SetupExplorationBlackout();
 
-            Debug.Log($"[ProceduralLevelGenerator] Generated seed {ActiveSeed}: {_generatedRooms.Count} rooms, {_repairNodeCount} power cells, {_energyCellCount} energy cells, {_enemyCount} enemies. Rooms: {string.Join(" | ", _roomDebugSummaries)}", this);
+            Debug.Log($"[ProceduralLevelGenerator] Generated seed {ActiveSeed}: {_generatedRooms.Count} rooms, {_repairNodeCount} power cells, {_energyCellCount} energy cells, {_enemyCount} enemies ({_hunterCount} hunters). Rooms: {string.Join(" | ", _roomDebugSummaries)}", this);
         }
 
         private bool HasRequiredReferences()
@@ -573,6 +581,7 @@ namespace EclipseProtocol.World
             }
 
             int placedCount = 0;
+            int hunterSlot = ShouldSpawnHunterInRoom(room, count) ? count - 1 : -1;
             for (int i = 0; i < count; i++)
             {
                 if (!TryGetOpenRoomPosition(room, 3f, room.ReservedPositions, out Vector3 desiredPosition))
@@ -582,13 +591,14 @@ namespace EclipseProtocol.World
 
                 Vector3 spawnPosition = SampleNavMesh(desiredPosition);
                 IReadOnlyList<Transform> patrolRoute = CreatePatrolRoute(room, i);
-                bool spawnHunter = room.Index > 1 && i == count - 1 && _rng.NextDouble() < Mathf.Lerp(0.1f, 0.45f, RoomProgress01(room.Index));
+                bool spawnHunter = i == hunterSlot;
                 if (spawnHunter)
                 {
                     HunterDroneAI hunter = Instantiate(hunterDronePrefab, spawnPosition, Quaternion.identity, levelRoot);
                     hunter.name = $"HunterDrone_R{room.Index + 1:00}_{i + 1:00}";
                     hunter.Initialize(balanceData, _player.transform, patrolRoute);
                     hunter.SetMovementBounds(room.BuildMovementBounds());
+                    _hunterCount++;
                 }
                 else
                 {
@@ -604,6 +614,22 @@ namespace EclipseProtocol.World
             }
 
             return placedCount;
+        }
+
+        private bool ShouldSpawnHunterInRoom(GeneratedRoom room, int enemySlots)
+        {
+            if (enemySlots <= 0 || room.Index + 1 < firstHunterRoomNumber)
+            {
+                return false;
+            }
+
+            if (guaranteeHunterByFinalRoom && _hunterCount == 0 && room.Index == _generatedRooms.Count - 1)
+            {
+                return true;
+            }
+
+            float chance = Mathf.Lerp(hunterChanceFirstEligibleRoom, hunterChanceLastRoom, RoomProgress01(room.Index));
+            return _rng.NextDouble() < chance;
         }
 
         private IReadOnlyList<Transform> CreatePatrolRoute(GeneratedRoom room, int enemyIndex)
