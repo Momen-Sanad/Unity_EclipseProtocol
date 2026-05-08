@@ -4,7 +4,7 @@ Shader "Eclipse Protocol/Room Exploration Blackout"
     {
         _BlackColor ("Blackout Color", Color) = (0, 0, 0, 1)
         _OverlayAlpha ("Overlay Alpha", Range(0, 1)) = 1
-        _Feather ("Edge Feather", Range(0, 4)) = 0.35
+        _Feather ("Edge Feather", Range(0, 4)) = 1.1
     }
 
     SubShader
@@ -32,15 +32,16 @@ Shader "Eclipse Protocol/Room Exploration Blackout"
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
 
-            #define MAX_EXPLORED_RECTS 32
+            #define MAX_ROOM_RECTS 32
 
             CBUFFER_START(UnityPerMaterial)
                 float4 _BlackColor;
                 float _OverlayAlpha;
                 float _Feather;
-                int _ExploredRectCount;
+                int _RoomRectCount;
                 float4 _PlayAreaRect;
-                float4 _ExploredRects[MAX_EXPLORED_RECTS];
+                float4 _RoomRects[MAX_ROOM_RECTS];
+                float4 _RoomRevealAmounts[MAX_ROOM_RECTS];
             CBUFFER_END
 
             struct Attributes
@@ -68,27 +69,28 @@ Shader "Eclipse Protocol/Room Exploration Blackout"
                 float2 insideDistance = min(position - rect.xy, rect.zw - position);
                 float edgeDistance = min(insideDistance.x, insideDistance.y);
                 float feather = max(_Feather, 0.0001);
-                return smoothstep(0.0, feather, edgeDistance);
+                return smoothstep(-feather, feather, edgeDistance);
             }
 
             half4 Frag(Varyings input) : SV_Target
             {
                 float2 worldXZ = input.positionWS.xz;
                 float playAreaMask = RectMask(worldXZ, _PlayAreaRect);
-                float exploredMask = 0.0;
+                float revealedMask = 0.0;
 
                 [unroll]
-                for (int i = 0; i < MAX_EXPLORED_RECTS; i++)
+                for (int i = 0; i < MAX_ROOM_RECTS; i++)
                 {
-                    if (i >= _ExploredRectCount)
+                    if (i >= _RoomRectCount)
                     {
                         break;
                     }
 
-                    exploredMask = max(exploredMask, RectMask(worldXZ, _ExploredRects[i]));
+                    float roomMask = RectMask(worldXZ, _RoomRects[i]);
+                    revealedMask = max(revealedMask, roomMask * saturate(_RoomRevealAmounts[i].x));
                 }
 
-                float blackout = saturate((1.0 - playAreaMask) + (1.0 - exploredMask));
+                float blackout = saturate(max(1.0 - playAreaMask, 1.0 - revealedMask));
                 return half4(_BlackColor.rgb, _BlackColor.a * _OverlayAlpha * blackout);
             }
             ENDHLSL

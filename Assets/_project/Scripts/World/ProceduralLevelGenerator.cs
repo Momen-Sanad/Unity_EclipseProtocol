@@ -77,7 +77,7 @@ namespace EclipseProtocol.World
 
         [Header("Exploration Blackout")]
         [SerializeField] private Material roomBlackoutMaterial;
-        [SerializeField, Min(0f)] private float blackoutOverlayHeight = 5.5f;
+        [SerializeField, Min(0f)] private float blackoutOverlayHeight = 2.2f;
         [SerializeField, Min(0f)] private float blackoutRevealPadding = 0.25f;
         [SerializeField, Min(1f)] private float blackoutOverlayMargin = 48f;
 
@@ -682,7 +682,9 @@ namespace EclipseProtocol.World
             List<RoomExplorationRegion> regions = new List<RoomExplorationRegion>(_generatedRooms.Count);
             for (int i = 0; i < _generatedRooms.Count; i++)
             {
-                regions.Add(new RoomExplorationRegion(_generatedRooms[i].BuildVisibilityBounds(blackoutRevealPadding)));
+                Bounds revealBounds = _generatedRooms[i].BuildVisibilityBounds(0f);
+                Bounds maskBounds = _generatedRooms[i].BuildVisibilityBounds(wallThickness);
+                regions.Add(new RoomExplorationRegion(revealBounds, maskBounds));
             }
 
             GameObject blackoutObject = new GameObject("RoomExplorationBlackout");
@@ -691,6 +693,7 @@ namespace EclipseProtocol.World
             _blackoutController.Configure(
                 roomBlackoutMaterial,
                 regions,
+                _progressionDoors,
                 _player.transform,
                 blackoutOverlayHeight,
                 blackoutRevealPadding,
