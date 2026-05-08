@@ -153,7 +153,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 1}
   m_AnchorMax: {x: 0.5, y: 1}
-  m_AnchoredPosition: {x: -250, y: -55}
+  m_AnchoredPosition: {x: 595, y: -10}
   m_SizeDelta: {x: 220, y: 28}
   m_Pivot: {x: 0.5, y: 1}
 --- !u!222 &122220325
@@ -174,7 +174,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 5f7201a12d95ffc409449d95f23cf332, type: 3}
-  m_Name: 
+  m_Name:
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Text
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -232,7 +232,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 38, y: -98}
+  m_AnchoredPosition: {x: 38, y: -68}
   m_SizeDelta: {x: 240, y: 22}
   m_Pivot: {x: 0, y: 1}
 --- !u!222 &184562191
@@ -294,7 +294,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &211048085
 RectTransform:
   m_ObjectHideFlags: 0
@@ -402,11 +402,37 @@ MonoBehaviour:
   energyCellPrefab: {fileID: 1384865193357652179, guid: 817ad542590de134297b5aec8dd40b86, type: 3}
   repairNodePrefab: {fileID: 5422232061630063986, guid: 84acec13a61a39b4396a870d3363d15c, type: 3}
   extractionTriggerPrefab: {fileID: 3163633786287060862, guid: 41c37194176b76b46b8f5e299bbd22cd, type: 3}
+  minRoomCount: 5
+  maxRoomCount: 8
+  roomWidthRange: {x: 15, y: 24}
+  roomDepthRange: {x: 14, y: 22}
+  floorThickness: 0.35
+  wallHeight: 4.2
+  wallThickness: 0.45
+  obstacleHeight: 1.4
+  roomSeparationPadding: 1.5
+  maxEnergyCellsFirstRoom: 3
+  minEnergyCellsLastRoom: 0
+  minEnemiesFirstRoom: 0
+  maxEnemiesLastRoom: 4
+  minPowerCellsFirstRoom: 1
+  maxPowerCellsLastRoom: 4
+  minObstaclesPerRoom: 1
+  maxObstaclesPerRoom: 5
   requireRepairPerRoom: 1
   doorWidth: 5
   doorHeight: 3.2
   doorThickness: 0.35
   doorSlideHeight: 3.6
+  floorColor: {r: 0.13, g: 0.16, b: 0.18, a: 1}
+  wallColor: {r: 0.28, g: 0.32, b: 0.36, a: 1}
+  obstacleColor: {r: 0.18, g: 0.22, b: 0.27, a: 1}
+  sealedDoorColor: {r: 0.18, g: 0.22, b: 0.28, a: 1}
+  lockedDoorColor: {r: 1, g: 0.35, b: 0.12, a: 1}
+  roomBlackoutMaterial: {fileID: 2100000, guid: e26364a772a3431eb343646c3260f29c, type: 2}
+  blackoutOverlayHeight: 5.5
+  blackoutRevealPadding: 0.25
+  blackoutOverlayMargin: 48
 --- !u!114 &411389487
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -590,7 +616,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 30, y: -100}
+  m_AnchoredPosition: {x: 30, y: -68}
   m_SizeDelta: {x: 220, y: 20}
   m_Pivot: {x: 0, y: 1}
 --- !u!114 &534397563
@@ -745,7 +771,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 30, y: -68}
+  m_AnchoredPosition: {x: 30, y: -30}
   m_SizeDelta: {x: 320, y: 24}
   m_Pivot: {x: 0, y: 1}
 --- !u!114 &882684279
@@ -1053,7 +1079,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 38, y: -66}
+  m_AnchoredPosition: {x: 38, y: -28}
   m_SizeDelta: {x: 300, y: 24}
   m_Pivot: {x: 0, y: 1}
 --- !u!222 &952891042
@@ -1461,6 +1487,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1219148323}
   - component: {fileID: 1219148322}
+  - component: {fileID: 1219148324}
   m_Layer: 0
   m_Name: Directional Light
   m_TagString: Untagged
@@ -1548,6 +1575,35 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1219148324
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1219148321}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 474bcb49853aa07438625e644c072ee6, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Unity.RenderPipelines.Universal.Runtime::UnityEngine.Rendering.Universal.UniversalAdditionalLightData
+  m_UsePipelineSettings: 1
+  m_AdditionalLightsShadowResolutionTier: 2
+  m_CustomShadowLayers: 0
+  m_LightCookieSize: {x: 1, y: 1}
+  m_LightCookieOffset: {x: 0, y: 0}
+  m_SoftShadowQuality: 0
+  m_RenderingLayersMask:
+    serializedVersion: 0
+    m_Bits: 1
+  m_ShadowRenderingLayersMask:
+    serializedVersion: 0
+    m_Bits: 1
+  m_Version: 4
+  m_LightLayerMask: 1
+  m_ShadowLayerMask: 1
+  m_RenderingLayers: 1
+  m_ShadowRenderingLayers: 1
 --- !u!1 &1362057950
 GameObject:
   m_ObjectHideFlags: 0
@@ -1725,6 +1781,7 @@ MonoBehaviour:
   dashCooldownFill: {fileID: 1139196915}
   repairProgressFill: {fileID: 1009523087}
   timerFill: {fileID: 917947489}
+  usePackagedHealthHud: 1
   healthText: {fileID: 2094911686}
   energyText: {fileID: 952891043}
   dashText: {fileID: 184562192}
@@ -1733,6 +1790,18 @@ MonoBehaviour:
   messageText: {fileID: 714292595}
   repairProgressRoot: {fileID: 1958804715}
   pauseOverlay: {fileID: 1594522062}
+  healthLowColor: {r: 1, g: 0.1, b: 0.08, a: 1}
+  healthMidColor: {r: 1, g: 0.78, b: 0.12, a: 1}
+  healthHighColor: {r: 0.25, g: 1, b: 0.35, a: 1}
+  energyLowColor: {r: 0.18, g: 0.28, b: 0.45, a: 1}
+  energyHighColor: {r: 0.2, g: 0.78, b: 1, a: 1}
+  dashEmptyColor: {r: 1, g: 0.34, b: 0.12, a: 1}
+  dashReadyColor: {r: 0.35, g: 1, b: 0.45, a: 1}
+  repairEmptyColor: {r: 0.05, g: 0.16, b: 0.42, a: 1}
+  repairFullColor: {r: 0.1, g: 0.55, b: 1, a: 1}
+  timerFullColor: {r: 0.25, g: 0.9, b: 1, a: 1}
+  timerMidColor: {r: 1, g: 0.78, b: 0.12, a: 1}
+  timerLowColor: {r: 1, g: 0.1, b: 0.08, a: 1}
 --- !u!224 &1515074579
 RectTransform:
   m_ObjectHideFlags: 0
@@ -2191,7 +2260,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &2094911684
 RectTransform:
   m_ObjectHideFlags: 0

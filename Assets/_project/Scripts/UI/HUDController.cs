@@ -14,6 +14,9 @@ namespace EclipseProtocol.UI
         [SerializeField] private Image repairProgressFill;
         [SerializeField] private Image timerFill;
 
+        [Header("Health HUD Source")]
+        [SerializeField] private bool usePackagedHealthHud = true;
+
         [Header("Text")]
         [SerializeField] private Text healthText;
         [SerializeField] private Text energyText;
@@ -46,7 +49,15 @@ namespace EclipseProtocol.UI
 
         private void Awake()
         {
-            ConfigureFillImage(healthFill, healthHighColor);
+            if (usePackagedHealthHud)
+            {
+                SetLegacyHealthHudVisible(false);
+            }
+            else
+            {
+                ConfigureFillImage(healthFill, healthHighColor);
+            }
+
             ConfigureFillImage(energyFill, energyHighColor);
             ConfigureFillImage(dashCooldownFill, dashReadyColor);
             ConfigureFillImage(repairProgressFill, repairEmptyColor);
@@ -144,7 +155,7 @@ namespace EclipseProtocol.UI
             float dashCooldown01 = _player.DashCooldownDuration <= 0f ? 0f : _player.DashCooldownRemaining / _player.DashCooldownDuration;
             float dashReady01 = 1f - Mathf.Clamp01(dashCooldown01);
 
-            if (healthFill != null)
+            if (!usePackagedHealthHud && healthFill != null)
             {
                 float clampedHealth = Mathf.Clamp01(health01);
                 healthFill.fillAmount = clampedHealth;
@@ -164,7 +175,7 @@ namespace EclipseProtocol.UI
                 dashCooldownFill.color = Color.Lerp(dashEmptyColor, dashReadyColor, dashReady01);
             }
 
-            if (healthText != null)
+            if (!usePackagedHealthHud && healthText != null)
             {
                 healthText.text = $"HP {Mathf.CeilToInt(_player.CurrentHealth)}/{Mathf.CeilToInt(_player.MaxHealth)}";
             }
@@ -216,6 +227,22 @@ namespace EclipseProtocol.UI
             if (_messageTimer <= 0f)
             {
                 messageText.text = string.Empty;
+            }
+        }
+
+        private void SetLegacyHealthHudVisible(bool isVisible)
+        {
+            if (healthFill != null)
+            {
+                Transform healthFillRoot = healthFill.transform.parent != null
+                    ? healthFill.transform.parent
+                    : healthFill.transform;
+                healthFillRoot.gameObject.SetActive(isVisible);
+            }
+
+            if (healthText != null)
+            {
+                healthText.gameObject.SetActive(isVisible);
             }
         }
 

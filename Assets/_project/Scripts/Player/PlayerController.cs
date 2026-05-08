@@ -4,6 +4,14 @@ using Ilumisoft.HealthSystem;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
+#if UNITY_6000_0_OR_NEWER
+using MovementPhysicsMaterial = UnityEngine.PhysicsMaterial;
+using MovementPhysicsMaterialCombine = UnityEngine.PhysicsMaterialCombine;
+#else
+using MovementPhysicsMaterial = UnityEngine.PhysicMaterial;
+using MovementPhysicsMaterialCombine = UnityEngine.PhysicMaterialCombine;
+#endif
+
 namespace EclipseProtocol.Player
 {
     [RequireComponent(typeof(Rigidbody))]
@@ -18,6 +26,10 @@ namespace EclipseProtocol.Player
         [Header("Collision Layers")]
         [SerializeField] private string playerLayerName = "Player";
         [SerializeField] private string enemyLayerName = "Enemy";
+
+        [Header("Collision Feel")]
+        [SerializeField] private bool useNoStickCollision = true;
+        [SerializeField] private MovementPhysicsMaterial noStickPhysicsMaterial;
 
         private Vector2 _moveInput;
         private Vector3 _lastNonZeroMoveDirection = Vector3.forward;
@@ -67,6 +79,8 @@ namespace EclipseProtocol.Player
                 CurrentHealth = 100f;
                 CurrentEnergy = 100f;
             }
+
+            ApplyNoStickCollision();
 
             _playerLayer = LayerMask.NameToLayer(playerLayerName);
             _enemyLayer = LayerMask.NameToLayer(enemyLayerName);
@@ -245,6 +259,33 @@ namespace EclipseProtocol.Player
             playerRigidbody.linearDamping = balanceData.playerDrag;
             playerRigidbody.angularDamping = balanceData.playerAngularDrag;
             playerRigidbody.constraints = RigidbodyConstraints.FreezeRotation;
+        }
+
+        private void ApplyNoStickCollision()
+        {
+            if (!useNoStickCollision || playerCollider == null)
+            {
+                return;
+            }
+
+            if (noStickPhysicsMaterial == null)
+            {
+                noStickPhysicsMaterial = CreateNoStickPhysicsMaterial();
+            }
+
+            playerCollider.sharedMaterial = noStickPhysicsMaterial;
+        }
+
+        private static MovementPhysicsMaterial CreateNoStickPhysicsMaterial()
+        {
+            MovementPhysicsMaterial material = new MovementPhysicsMaterial("EclipseProtocol_NoStick");
+            material.dynamicFriction = 0f;
+            material.staticFriction = 0f;
+            material.bounciness = 0f;
+            material.frictionCombine = MovementPhysicsMaterialCombine.Minimum;
+            material.bounceCombine = MovementPhysicsMaterialCombine.Minimum;
+            material.hideFlags = HideFlags.DontSave;
+            return material;
         }
 
         private void SyncHealthComponent()

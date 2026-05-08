@@ -14,6 +14,7 @@ namespace EclipseProtocol.World
         [SerializeField, Min(0.25f)] private float openHeight = 3.4f;
         [SerializeField, Min(0.1f)] private float slideSpeed = 5f;
         [SerializeField, Min(0.1f)] private float crossingDistance = 1.25f;
+        [SerializeField, Min(0)] private int requiredRepairCount = 1;
         [SerializeField] private Color lockedColor = new Color(1f, 0.35f, 0.12f);
         [SerializeField] private Color openColor = new Color(0.25f, 0.9f, 1f);
 
@@ -23,6 +24,7 @@ namespace EclipseProtocol.World
         private Vector3 _openLocalPosition;
         private bool _isOpen;
         private bool _closedBehindPlayer;
+        private int _completedRepairCount;
 
         public bool IsOpen => _isOpen;
 
@@ -52,6 +54,33 @@ namespace EclipseProtocol.World
             openHeight = Mathf.Max(0.25f, slideHeight);
             CaptureReferences();
             SetOpen(false);
+        }
+
+        public void SetRequiredRepairCount(int count)
+        {
+            requiredRepairCount = Mathf.Max(0, count);
+            _completedRepairCount = 0;
+            if (requiredRepairCount == 0)
+            {
+                UnlockAndOpen();
+            }
+        }
+
+        public bool NotifyRepairNodeCompleted()
+        {
+            if (_isOpen || _closedBehindPlayer)
+            {
+                return false;
+            }
+
+            _completedRepairCount = Mathf.Min(requiredRepairCount, _completedRepairCount + 1);
+            if (_completedRepairCount < requiredRepairCount)
+            {
+                return false;
+            }
+
+            UnlockAndOpen();
+            return true;
         }
 
         public void UnlockAndOpen()

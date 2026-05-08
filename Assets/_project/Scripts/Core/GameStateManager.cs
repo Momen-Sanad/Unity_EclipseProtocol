@@ -36,6 +36,19 @@ namespace EclipseProtocol.Core
             Time.timeScale = 1f;
         }
 
+        private void OnDestroy()
+        {
+            if (runTimer != null)
+            {
+                runTimer.Expired -= TriggerLoss;
+            }
+
+            if (Instance == this)
+            {
+                Instance = null;
+            }
+        }
+
         private void Start()
         {
             if (hudController == null)
@@ -129,7 +142,7 @@ namespace EclipseProtocol.Core
             if (_repairNodes.Count > 0 && _repairedNodes.Count < _repairNodes.Count)
             {
                 UpdateRepairObjective();
-                hudController?.ShowMessage("Door unlocked. Move forward.", 2f);
+                hudController?.ShowMessage("Power node repaired.", 1.5f);
                 return;
             }
 

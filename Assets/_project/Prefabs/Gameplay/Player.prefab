@@ -161,6 +161,8 @@ MonoBehaviour:
   playerCollider: {fileID: 2576811218750430837}
   playerLayerName: Player
   enemyLayerName: Enemy
+  useNoStickCollision: 1
+  noStickPhysicsMaterial: {fileID: 0}
 --- !u!114 &6849312905761384421
 MonoBehaviour:
   m_ObjectHideFlags: 0

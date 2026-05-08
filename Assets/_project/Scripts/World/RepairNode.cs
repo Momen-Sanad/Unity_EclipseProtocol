@@ -24,6 +24,7 @@ namespace EclipseProtocol.World
         private MaterialPropertyBlock _statusPropertyBlock;
         private float _progressSeconds;
         private bool _promptShown;
+        private static RepairNode _activeRepairNode;
 
         public bool IsRepaired { get; private set; }
         public float Progress01 => RepairSeconds <= 0f ? 1f : Mathf.Clamp01(_progressSeconds / RepairSeconds);
@@ -46,6 +47,11 @@ namespace EclipseProtocol.World
             SetStatusColor(repairingColor);
         }
 
+        private void OnDestroy()
+        {
+            ReleaseRepairClaim();
+        }
+
         private void Update()
         {
             RefreshPlayerPresence();
@@ -58,6 +64,7 @@ namespace EclipseProtocol.World
                     _hudController?.SetRepairProgress(0f, false);
                 }
 
+                ReleaseRepairClaim();
                 return;
             }
 
@@ -65,6 +72,11 @@ namespace EclipseProtocol.World
             bool isHoldingRepair = keyboard != null && keyboard.eKey.isPressed;
             if (isHoldingRepair)
             {
+                if (!TryClaimRepair())
+                {
+                    return;
+                }
+
                 _progressSeconds += Time.deltaTime;
                 _hudController?.SetRepairProgress(Progress01, true);
 
@@ -75,8 +87,13 @@ namespace EclipseProtocol.World
             }
             else if (_progressSeconds > 0f)
             {
+                ReleaseRepairClaim();
                 _progressSeconds = Mathf.Max(0f, _progressSeconds - Time.deltaTime);
                 _hudController?.SetRepairProgress(Progress01, true);
+            }
+            else
+            {
+                ReleaseRepairClaim();
             }
         }
 
@@ -111,6 +128,7 @@ namespace EclipseProtocol.World
 
             _playerInside = null;
             _promptShown = false;
+            ReleaseRepairClaim();
             _hudController?.SetRepairProgress(0f, false);
         }
 
@@ -126,6 +144,7 @@ namespace EclipseProtocol.World
 
                 _playerInside = null;
                 _promptShown = false;
+                ReleaseRepairClaim();
                 _hudController?.SetRepairProgress(0f, false);
                 return;
             }
@@ -155,7 +174,11 @@ namespace EclipseProtocol.World
                 _hudController?.ShowMessage("Hold E to repair power node", 2f);
             }
 
-            _hudController?.SetRepairProgress(Progress01, !IsRepaired);
+            if (_activeRepairNode == null || _activeRepairNode == this)
+            {
+                _hudController?.SetRepairProgress(Progress01, !IsRepaired);
+            }
+
             return true;
         }
 
@@ -163,9 +186,13 @@ namespace EclipseProtocol.World
         {
             IsRepaired = true;
             _progressSeconds = RepairSeconds;
+            ReleaseRepairClaim();
             SetStatusColor(repairedColor);
             _hudController?.SetRepairProgress(1f, false);
-            linkedDoor?.UnlockAndOpen();
+            if (linkedDoor != null && linkedDoor.NotifyRepairNodeCompleted())
+            {
+                _hudController?.ShowMessage("Door unlocked. Move forward.", 2f);
+            }
             AudioManager.Instance?.PlayRepairComplete(transform.position);
             GameStateManager.Instance?.MarkPowerRepaired(this);
         }
@@ -184,6 +211,25 @@ namespace EclipseProtocol.World
             if (statusLight != null)
             {
                 statusLight.color = color;
+            }
+        }
+
+        private bool TryClaimRepair()
+        {
+            if (_activeRepairNode == null || _activeRepairNode == this)
+            {
+                _activeRepairNode = this;
+                return true;
+            }
+
+            return false;
+        }
+
+        private void ReleaseRepairClaim()
+        {
+            if (_activeRepairNode == this)
+            {
+                _activeRepairNode = null;
             }
         }
     }

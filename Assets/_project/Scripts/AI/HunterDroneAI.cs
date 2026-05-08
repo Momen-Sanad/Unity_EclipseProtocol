@@ -33,6 +33,9 @@ namespace EclipseProtocol.AI
         [SerializeField] private Color attackColor = new Color(1f, 0.1f, 0.08f);
         [SerializeField, Min(0.05f)] private float waypointTolerance = 0.35f;
         [SerializeField, Min(0.05f)] private float repathInterval = 0.15f;
+        [SerializeField] private bool constrainToRoom;
+        [SerializeField] private Bounds movementBounds;
+        [SerializeField, Min(0.1f)] private float roomEdgePadding = 0.75f;
 
         private EnemyContactDamage _contactDamage;
         private HunterState _state = HunterState.Idle;
@@ -64,6 +67,14 @@ namespace EclipseProtocol.AI
 
             ApplyAgentSettings();
             EnterState(patrolPoints.Count > 0 ? HunterState.Patrol : HunterState.Idle);
+        }
+
+        public void SetMovementBounds(Bounds bounds)
+        {
+            movementBounds = bounds;
+            constrainToRoom = true;
+            _homePosition = ClampToMovementBounds(_homePosition);
+            EnforceMovementBounds();
         }
 
         private void Reset()
@@ -106,7 +117,13 @@ namespace EclipseProtocol.AI
 
         private void Update()
         {
-            if (target == null || navMeshAgent == null || !navMeshAgent.isOnNavMesh)
+            if (navMeshAgent == null || !navMeshAgent.isOnNavMesh)
+            {
+                return;
+            }
+
+            EnforceMovementBounds();
+            if (target == null)
             {
                 return;
             }
@@ -135,6 +152,8 @@ namespace EclipseProtocol.AI
                     TickReturn();
                     break;
             }
+
+            EnforceMovementBounds();
         }
 
         private void TickIdle()
@@ -184,7 +203,7 @@ namespace EclipseProtocol.AI
             if (_repathTimer <= 0f)
             {
                 _repathTimer = repathInterval;
-                navMeshAgent.SetDestination(target.position);
+                navMeshAgent.SetDestination(ClampToMovementBounds(target.position));
             }
         }
 
@@ -262,7 +281,7 @@ namespace EclipseProtocol.AI
                     SetStateColor(patrolColor);
                     if (canUseAgent && patrolPoints.Count > 0)
                     {
-                        navMeshAgent.SetDestination(patrolPoints[_patrolIndex].position);
+                        navMeshAgent.SetDestination(ClampToMovementBounds(patrolPoints[_patrolIndex].position));
                     }
                     break;
                 case HunterState.Chase:
@@ -306,7 +325,8 @@ namespace EclipseProtocol.AI
                     if (canUseAgent)
                     {
                         navMeshAgent.isStopped = false;
-                        navMeshAgent.SetDestination(patrolPoints.Count > 0 ? patrolPoints[_patrolIndex].position : _homePosition);
+                        Vector3 destination = patrolPoints.Count > 0 ? patrolPoints[_patrolIndex].position : _homePosition;
+                        navMeshAgent.SetDestination(ClampToMovementBounds(destination));
                     }
                     SetStateColor(patrolColor);
                     break;
@@ -328,6 +348,11 @@ namespace EclipseProtocol.AI
         private bool CanDetectTarget()
         {
             if (target == null)
+            {
+                return false;
+            }
+
+            if (constrainToRoom && !IsInsideMovementBounds(target.position))
             {
                 return false;
             }
@@ -367,6 +392,61 @@ namespace EclipseProtocol.AI
             {
                 _contactDamage.Configure(Damage, 0.5f, false);
             }
+        }
+
+        private void EnforceMovementBounds()
+        {
+            if (!constrainToRoom || IsInsideMovementBounds(transform.position))
+            {
+                return;
+            }
+
+            Vector3 clampedPosition = ClampToMovementBounds(transform.position);
+            if (NavMesh.SamplePosition(clampedPosition, out NavMeshHit hit, 3f, NavMesh.AllAreas))
+            {
+                clampedPosition = hit.position;
+            }
+
+            if (navMeshAgent != null && navMeshAgent.isOnNavMesh)
+            {
+                navMeshAgent.Warp(clampedPosition);
+                navMeshAgent.ResetPath();
+            }
+            else
+            {
+                transform.position = clampedPosition;
+            }
+
+            EnterState(HunterState.Return);
+        }
+
+        private bool IsInsideMovementBounds(Vector3 position)
+        {
+            if (!constrainToRoom)
+            {
+                return true;
+            }
+
+            Vector3 min = movementBounds.min;
+            Vector3 max = movementBounds.max;
+            return position.x >= min.x + roomEdgePadding
+                && position.x <= max.x - roomEdgePadding
+                && position.z >= min.z + roomEdgePadding
+                && position.z <= max.z - roomEdgePadding;
+        }
+
+        private Vector3 ClampToMovementBounds(Vector3 position)
+        {
+            if (!constrainToRoom)
+            {
+                return position;
+            }
+
+            Vector3 min = movementBounds.min;
+            Vector3 max = movementBounds.max;
+            position.x = Mathf.Clamp(position.x, min.x + roomEdgePadding, max.x - roomEdgePadding);
+            position.z = Mathf.Clamp(position.z, min.z + roomEdgePadding, max.z - roomEdgePadding);
+            return position;
         }
 
         private float DetectionRadius => balanceData != null ? balanceData.droneDetectionRadius : 8f;

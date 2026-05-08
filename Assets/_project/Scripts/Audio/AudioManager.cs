@@ -46,17 +46,25 @@ namespace EclipseProtocol.Audio
         {
             if (_instance != null && _instance != this)
             {
-                Destroy(gameObject);
+                Destroy(this);
                 return;
             }
 
             _instance = this;
-            if (Application.isPlaying)
+            if (Application.isPlaying && CanPersistAcrossScenes())
             {
                 DontDestroyOnLoad(gameObject);
             }
 
             EnsureReady();
+        }
+
+        private void OnDestroy()
+        {
+            if (_instance == this)
+            {
+                _instance = null;
+            }
         }
 
         private void Start()
@@ -163,6 +171,26 @@ namespace EclipseProtocol.Audio
             _victoryClip ??= CreateTone("VictoryCue", 660f, 0.45f, 0.34f, 990f);
             _lossClip ??= CreateTone("LossCue", 220f, 0.5f, 0.36f, 110f);
             _ambientLoop ??= CreateTone("StationAmbient", 74f, 2.5f, 0.08f, 111f);
+        }
+
+        private bool CanPersistAcrossScenes()
+        {
+            Component[] components = GetComponents<Component>();
+            for (int i = 0; i < components.Length; i++)
+            {
+                Component component = components[i];
+                if (component == null
+                    || component is Transform
+                    || component is AudioManager
+                    || component is AudioSource)
+                {
+                    continue;
+                }
+
+                return false;
+            }
+
+            return true;
         }
 
         private static AudioClip CreateTone(string clipName, float frequency, float durationSeconds, float amplitude, float secondFrequency = 0f)
