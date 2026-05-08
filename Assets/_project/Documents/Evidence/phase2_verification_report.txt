@@ -1,0 +1,48 @@
+Eclipse Protocol Phase 2 Verification Report
+Generated: May 7, 2026
+
+Scope
+- Source deliverable only.
+- Standalone executable intentionally skipped.
+
+Implemented Checklist
+[PASS] Separate Menu, Gameplay, Victory, and Loss scenes exist.
+[PASS] Build settings route Menu -> Gameplay -> Victory/Loss.
+[PASS] Menu supports optional seed entry.
+[PASS] Runtime seed bridge provides stable deterministic seeds.
+[PASS] GameBalanceData includes run timer, repair duration, procedural room counts, overlap padding, hunter lunge, and objective tuning.
+[PASS] ProceduralLevelGenerator places Start, Corridor, Node, and Extraction modules.
+[PASS] RoomModule exposes anchors, bounds, spawn points, objective sockets, and room type.
+[PASS] Room placement uses anchor snapping and seeded corridor selection.
+[PASS] Generated level clears cleanly before repeat generation.
+[PASS] Runtime NavMeshSurface rebuild is requested after generation.
+[PASS] Player spawns in the Start room.
+[PASS] RepairNode spawns in the Node room.
+[PASS] ExtractionTrigger spawns locked in the Extraction room.
+[PASS] Repair interaction uses hold-to-repair progress.
+[PASS] Repair completion unlocks extraction.
+[PASS] Extraction victory loads the Victory scene.
+[PASS] Health or timer failure loads the Loss scene.
+[PASS] Gameplay pause uses an overlay and restores time scale on resume.
+[PASS] HUD tracks health, energy, dash cooldown, repair progress, timer, and objective text.
+[PASS] Hunter AI uses patrol/chase/wind-up/lunge/recover/return states.
+[PASS] Hunter damage is enabled only during lunge.
+[PASS] Player dash spends energy, uses cooldown, and keeps invulnerability.
+[PASS] Feedback hooks exist for dash, pickup, damage, repair, hunter warning/lunge, locked extraction, victory, and loss.
+[PASS] Repair and extraction prefabs include particle feedback.
+
+Editor Verification
+[PASS] Unity compile/import succeeded after Phase 2 scene, prefab, UI, AI, and feedback wiring.
+[PASS] Unity console check after import showed 0 errors and 0 warnings.
+[BLOCKED] Final deterministic generation check was not executed because the Unity editor bridge revoked access.
+[BLOCKED] Final screenshot capture was not executed because the Unity editor bridge revoked access.
+
+Required Final Live Checks After Reauthorization
+[TODO] Generate twice with seed phase2-validation and compare room order/transforms.
+[TODO] Confirm generated room bounds do not overlap.
+[TODO] Confirm NavMesh path from player spawn to extraction is complete.
+[TODO] Play repair -> extraction -> Victory flow.
+[TODO] Play health zero -> Loss flow.
+[TODO] Play timer zero -> Loss flow.
+[TODO] Confirm pause freezes and resumes gameplay.
+[TODO] Confirm hunter lunge damages only during the active lunge window.

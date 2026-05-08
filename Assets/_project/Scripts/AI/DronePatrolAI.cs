@@ -18,6 +18,30 @@ namespace EclipseProtocol.AI
         public IReadOnlyList<Transform> Waypoints => waypoints;
         public GameBalanceData BalanceData => balanceData;
 
+        public void Initialize(GameBalanceData data, IReadOnlyList<Transform> patrolWaypoints)
+        {
+            balanceData = data;
+            waypoints.Clear();
+            if (patrolWaypoints != null)
+            {
+                for (int i = 0; i < patrolWaypoints.Count; i++)
+                {
+                    if (patrolWaypoints[i] != null)
+                    {
+                        waypoints.Add(patrolWaypoints[i]);
+                    }
+                }
+            }
+
+            _currentWaypointIndex = 0;
+            ApplyAgentSettings();
+
+            if (navMeshAgent != null && navMeshAgent.isOnNavMesh && waypoints.Count > 0)
+            {
+                navMeshAgent.SetDestination(waypoints[0].position);
+            }
+        }
+
         private void Reset()
         {
             navMeshAgent = GetComponent<NavMeshAgent>();

@@ -1,4 +1,5 @@
 using EclipseProtocol.Core;
+using EclipseProtocol.Audio;
 using Ilumisoft.HealthSystem;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -32,6 +33,9 @@ namespace EclipseProtocol.Player
         public float MaxHealth => balanceData != null ? balanceData.maxHealth : 100f;
         public float MaxEnergy => balanceData != null ? balanceData.maxEnergy : 100f;
         public float DashCooldownRemaining => Mathf.Max(0f, _dashCooldownTimer);
+        public float DashCooldownDuration => balanceData != null ? balanceData.dashCooldown : 8f;
+        public bool IsDashing => _isDashing;
+        public bool IsGrounded { get; private set; }
         public bool IsInvulnerable { get; private set; }
 
         private void Reset()
@@ -72,6 +76,7 @@ namespace EclipseProtocol.Player
 
         private void Update()
         {
+            UpdateGroundedState();
             ReadKeyboardInput();
 
             if (!_isDashing)
@@ -136,12 +141,34 @@ namespace EclipseProtocol.Player
             _isDashing = true;
             IsInvulnerable = true;
             SetEnemyCollisionIgnored(true);
+            AudioManager.Instance?.PlayDash(transform.position);
             return true;
         }
 
-        public void RestoreEnergy(float amount)
+        public float RestoreEnergy(float amount)
         {
+            float previousEnergy = CurrentEnergy;
             CurrentEnergy = Mathf.Clamp(CurrentEnergy + amount, 0f, MaxEnergy);
+            return CurrentEnergy - previousEnergy;
+        }
+
+        public bool TryJump()
+        {
+            if (!IsGrounded)
+            {
+                return false;
+            }
+
+            float jumpVelocity = balanceData != null ? balanceData.jumpVelocity : 7.5f;
+#if UNITY_6000_0_OR_NEWER
+            Vector3 currentVelocity = playerRigidbody.linearVelocity;
+            playerRigidbody.linearVelocity = new Vector3(currentVelocity.x, jumpVelocity, currentVelocity.z);
+#else
+            Vector3 currentVelocity = playerRigidbody.velocity;
+            playerRigidbody.velocity = new Vector3(currentVelocity.x, jumpVelocity, currentVelocity.z);
+#endif
+            IsGrounded = false;
+            return true;
         }
 
         public void TeleportTo(Vector3 position, Quaternion rotation)
@@ -179,7 +206,13 @@ namespace EclipseProtocol.Player
                 return;
             }
 
+            float previousHealth = CurrentHealth;
             CurrentHealth = Mathf.Max(0f, CurrentHealth - amount);
+            if (CurrentHealth < previousHealth)
+            {
+                AudioManager.Instance?.PlayDamage(transform.position);
+            }
+
             SyncHealthComponent();
         }
 
@@ -225,6 +258,19 @@ namespace EclipseProtocol.Player
             _healthComponent.SetHealth(CurrentHealth);
         }
 
+        private void UpdateGroundedState()
+        {
+            if (playerCollider == null)
+            {
+                IsGrounded = Physics.Raycast(transform.position + Vector3.up * 0.05f, Vector3.down, 1.15f, ~0, QueryTriggerInteraction.Ignore);
+                return;
+            }
+
+            float rayDistance = balanceData != null ? balanceData.groundedRayDistance : playerCollider.bounds.extents.y + 0.12f;
+            Vector3 origin = transform.position + Vector3.up * 0.05f;
+            IsGrounded = Physics.Raycast(origin, Vector3.down, rayDistance, ~0, QueryTriggerInteraction.Ignore);
+        }
+
         private void ReadKeyboardInput()
         {
             Keyboard keyboard = Keyboard.current;
@@ -257,6 +303,11 @@ namespace EclipseProtocol.Player
             _moveInput = new Vector2(x, y);
 
             if (keyboard.spaceKey.wasPressedThisFrame)
+            {
+                TryJump();
+            }
+
+            if (keyboard.leftShiftKey.wasPressedThisFrame || keyboard.rightShiftKey.wasPressedThisFrame)
             {
                 TryDash();
             }

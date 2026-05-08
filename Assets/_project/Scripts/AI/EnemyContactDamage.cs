@@ -8,8 +8,21 @@ namespace EclipseProtocol.AI
     {
         [SerializeField, Min(0f)] private float damageAmount = 10f;
         [SerializeField, Min(0f)] private float damageCooldown = 1f;
+        [SerializeField] private bool damageEnabled = true;
 
         private float _nextDamageTime;
+
+        public void Configure(float amount, float cooldown, bool enabled)
+        {
+            damageAmount = Mathf.Max(0f, amount);
+            damageCooldown = Mathf.Max(0f, cooldown);
+            damageEnabled = enabled;
+        }
+
+        public void SetDamageEnabled(bool enabled)
+        {
+            damageEnabled = enabled;
+        }
 
         private void OnCollisionEnter(Collision collision)
         {
@@ -33,7 +46,7 @@ namespace EclipseProtocol.AI
 
         private void TryDamage(Collider other)
         {
-            if (Time.time < _nextDamageTime)
+            if (!damageEnabled || Time.time < _nextDamageTime)
             {
                 return;
             }
