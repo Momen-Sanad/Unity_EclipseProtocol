@@ -419,6 +419,16 @@ MonoBehaviour:
   maxPowerCellsLastRoom: 4
   minObstaclesPerRoom: 1
   maxObstaclesPerRoom: 5
+  guideLineColor: {r: 1, g: 0.78, b: 0.08, a: 1}
+  guideLineWidth: 0.18
+  guideLineHeight: 0.04
+  guideLineFloorOffset: 0.02
+  guideLineLaneOffset: 1.6
+  guideLineDoorInset: 1.2
+  firstHunterRoomNumber: 3
+  hunterChanceFirstEligibleRoom: 0.2
+  hunterChanceLastRoom: 0.55
+  guaranteeHunterByFinalRoom: 1
   requireRepairPerRoom: 1
   doorWidth: 5
   doorHeight: 3.2
@@ -430,7 +440,7 @@ MonoBehaviour:
   sealedDoorColor: {r: 0.18, g: 0.22, b: 0.28, a: 1}
   lockedDoorColor: {r: 1, g: 0.35, b: 0.12, a: 1}
   roomBlackoutMaterial: {fileID: 2100000, guid: e26364a772a3431eb343646c3260f29c, type: 2}
-  blackoutOverlayHeight: 5.5
+  blackoutOverlayHeight: 2.2
   blackoutRevealPadding: 0.25
   blackoutOverlayMargin: 48
 --- !u!114 &411389487
