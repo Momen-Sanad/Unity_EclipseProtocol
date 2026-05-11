@@ -367,24 +367,82 @@ namespace EclipseProtocol.World
             int obstacleCount = _rng.Next(minObstaclesPerRoom, maxCount + 1);
             for (int i = 0; i < obstacleCount; i++)
             {
-                if (!TryGetOpenRoomPosition(room, 2.4f, room.ReservedPositions, out Vector3 position))
-                {
-                    continue;
-                }
-
                 float width = RandomRange(1.4f, 3.4f);
                 float depth = RandomRange(1.4f, 3.2f);
                 float height = RandomRange(0.75f, obstacleHeight);
+                Quaternion rotation = Quaternion.Euler(0f, _rng.Next(0, 4) * 90f, 0f);
+                Vector3 footprintSize = GetObstacleFootprintSize(width, depth, rotation);
+
+                if (!TryGetOpenObstaclePosition(room, footprintSize, out Vector3 position))
+                {
+                    continue;
+                }
 
                 GameObject obstacle = GameObject.CreatePrimitive(PrimitiveType.Cube);
                 obstacle.name = $"Obstacle_{i + 1:00}";
                 obstacle.transform.SetParent(room.Root.transform, false);
                 obstacle.transform.position = position + Vector3.up * (height * 0.5f);
-                obstacle.transform.rotation = Quaternion.Euler(0f, _rng.Next(0, 4) * 90f, 0f);
+                obstacle.transform.rotation = rotation;
                 obstacle.transform.localScale = new Vector3(width, height, depth);
                 Tint(obstacle, obstacleColor);
                 room.ReservedPositions.Add(position);
+                room.ObstacleFootprints.Add(BuildFootprintBounds(position, footprintSize, 0.25f));
             }
+        }
+
+        private bool TryGetOpenObstaclePosition(GeneratedRoom room, Vector3 footprintSize, out Vector3 position)
+        {
+            const float obstaclePadding = 0.25f;
+            float clearance = Mathf.Max(2.4f, Mathf.Max(footprintSize.x, footprintSize.z) * 0.5f + obstaclePadding);
+            float halfWidth = Mathf.Max(0.5f, room.Width * 0.5f - footprintSize.x * 0.5f - wallThickness - obstaclePadding);
+            float halfDepth = Mathf.Max(0.5f, room.Depth * 0.5f - footprintSize.z * 0.5f - wallThickness - obstaclePadding);
+
+            for (int attempt = 0; attempt < 64; attempt++)
+            {
+                Vector3 candidate = room.Center + new Vector3(RandomRange(-halfWidth, halfWidth), 0f, RandomRange(-halfDepth, halfDepth));
+                Bounds footprint = BuildFootprintBounds(candidate, footprintSize, obstaclePadding);
+                if (IsReserved(candidate, room.ReservedPositions, clearance)
+                    || IsNearDoorLane(room, candidate, clearance)
+                    || IntersectsObstacleFootprint(footprint, room.ObstacleFootprints))
+                {
+                    continue;
+                }
+
+                position = candidate;
+                return true;
+            }
+
+            position = room.Center;
+            return false;
+        }
+
+        private static Vector3 GetObstacleFootprintSize(float width, float depth, Quaternion rotation)
+        {
+            Vector3 right = rotation * Vector3.right;
+            Vector3 forward = rotation * Vector3.forward;
+            float worldWidth = Mathf.Abs(right.x) * width + Mathf.Abs(forward.x) * depth;
+            float worldDepth = Mathf.Abs(right.z) * width + Mathf.Abs(forward.z) * depth;
+            return new Vector3(worldWidth, 0f, worldDepth);
+        }
+
+        private static Bounds BuildFootprintBounds(Vector3 center, Vector3 size, float padding)
+        {
+            return new Bounds(
+                new Vector3(center.x, 0f, center.z),
+                new Vector3(size.x + padding * 2f, 1f, size.z + padding * 2f));
+        }
+
+        private static bool IntersectsObstacleFootprint(Bounds footprint, IReadOnlyList<Bounds> obstacleFootprints)
+        {
+            for (int i = 0; i < obstacleFootprints.Count; i++)
+            {
+                if (footprint.Intersects(obstacleFootprints[i]))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private void RebuildNavMesh()
@@ -995,6 +1053,7 @@ namespace EclipseProtocol.World
             public GameObject Root { get; set; }
             public DoorGate ForwardDoor { get; set; }
             public List<Vector3> ReservedPositions { get; } = new List<Vector3>();
+            public List<Bounds> ObstacleFootprints { get; } = new List<Bounds>();
 
             public bool HasDoorOn(Vector2Int direction)
             {
