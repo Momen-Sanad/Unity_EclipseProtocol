@@ -420,10 +420,47 @@ namespace EclipseProtocol.World
                 }
 
                 Vector3 direction = delta.normalized;
+                float startTrim = IsGuideTurn(route, i) ? GuideLineTurnClearance() : 0f;
+                float endTrim = IsGuideTurn(route, i + 1) ? GuideLineTurnClearance() : 0f;
+                float maxTrim = Mathf.Max(0f, delta.magnitude * 0.5f - 0.1f);
+                startTrim = Mathf.Min(startTrim, maxTrim);
+                endTrim = Mathf.Min(endTrim, maxTrim);
+                if (startTrim + endTrim >= delta.magnitude - 0.1f)
+                {
+                    continue;
+                }
+
+                start += direction * startTrim;
+                end -= direction * endTrim;
+
                 Vector3 lateral = new Vector3(-direction.z, 0f, direction.x);
                 CreateGuideLineSegment(room, start + lateral * guideLineLaneOffset, end + lateral * guideLineLaneOffset, i, "A");
                 CreateGuideLineSegment(room, start - lateral * guideLineLaneOffset, end - lateral * guideLineLaneOffset, i, "B");
             }
+        }
+
+        private float GuideLineTurnClearance()
+        {
+            return guideLineLaneOffset + guideLineWidth + 0.25f;
+        }
+
+        private static bool IsGuideTurn(IReadOnlyList<Vector3> route, int pointIndex)
+        {
+            if (pointIndex <= 0 || pointIndex >= route.Count - 1)
+            {
+                return false;
+            }
+
+            Vector3 incoming = route[pointIndex] - route[pointIndex - 1];
+            Vector3 outgoing = route[pointIndex + 1] - route[pointIndex];
+            incoming.y = 0f;
+            outgoing.y = 0f;
+            if (incoming.sqrMagnitude < 0.01f || outgoing.sqrMagnitude < 0.01f)
+            {
+                return false;
+            }
+
+            return Mathf.Abs(Vector3.Dot(incoming.normalized, outgoing.normalized)) < 0.99f;
         }
 
         private List<Vector3> BuildGuideRoute(GeneratedRoom room)
