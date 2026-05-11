@@ -1,7 +1,5 @@
 using EclipseProtocol.Core;
-using EclipseProtocol.Audio;
 using EclipseProtocol.Player;
-using EclipseProtocol.UI;
 using UnityEngine;
 
 namespace EclipseProtocol.World
@@ -11,6 +9,8 @@ namespace EclipseProtocol.World
     {
         [SerializeField] private GameBalanceData balanceData;
         [SerializeField, Min(1f)] private float energyRestoreAmount = 25f;
+
+        public float EnergyRestoreAmount => energyRestoreAmount;
 
         private void Awake()
         {
@@ -30,10 +30,11 @@ namespace EclipseProtocol.World
                 return;
             }
 
-            float restoredEnergy = playerController.RestoreEnergy(energyRestoreAmount);
-            FindAnyObjectByType<HUDController>()?.ShowEnergyGain(restoredEnergy);
-            AudioManager.Instance?.PlayPickup(transform.position);
-            Debug.Log($"[EnergyCellPickup] Restored {restoredEnergy} energy to {other.name}.", this);
+            EnergyCellSystem.Instance.TryCollect(this, playerController);
+        }
+
+        public void Consume()
+        {
             gameObject.SetActive(false);
         }
     }

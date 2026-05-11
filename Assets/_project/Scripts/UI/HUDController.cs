@@ -1,5 +1,6 @@
 using EclipseProtocol.Core;
 using EclipseProtocol.Player;
+using EclipseProtocol.World;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -45,6 +46,7 @@ namespace EclipseProtocol.UI
         private PlayerController _player;
         private RunTimer _timer;
         private RunScore _score;
+        private EnergyCellSystem _energyCellSystem;
         private float _messageTimer;
 
         public GameObject PauseOverlay => pauseOverlay;
@@ -76,6 +78,16 @@ namespace EclipseProtocol.UI
             }
         }
 
+        private void OnEnable()
+        {
+            SetEnergyCellSystem(EnergyCellSystem.Instance);
+        }
+
+        private void OnDisable()
+        {
+            SetEnergyCellSystem(null);
+        }
+
         private void Update()
         {
             UpdatePlayerStats();
@@ -99,6 +111,26 @@ namespace EclipseProtocol.UI
             _score = score;
             EnsureScoreText();
             UpdateScore();
+        }
+
+        public void SetEnergyCellSystem(EnergyCellSystem energyCellSystem)
+        {
+            if (_energyCellSystem == energyCellSystem)
+            {
+                return;
+            }
+
+            if (_energyCellSystem != null)
+            {
+                _energyCellSystem.EnergyRestored -= HandleEnergyRestored;
+            }
+
+            _energyCellSystem = energyCellSystem;
+
+            if (_energyCellSystem != null)
+            {
+                _energyCellSystem.EnergyRestored += HandleEnergyRestored;
+            }
         }
 
         public void SetObjective(string text)
@@ -252,6 +284,11 @@ namespace EclipseProtocol.UI
             {
                 messageText.text = string.Empty;
             }
+        }
+
+        private void HandleEnergyRestored(EnergyCellPickup pickup, PlayerController player, float restoredEnergy)
+        {
+            ShowEnergyGain(restoredEnergy);
         }
 
         private void EnsureScoreText()

@@ -13,6 +13,7 @@ namespace EclipseProtocol.Core
         [SerializeField] private bool startAutomatically = true;
 
         private PlayerController _player;
+        private RunTimer _timer;
         private bool _isRunning;
         private float _score;
 
@@ -43,16 +44,7 @@ namespace EclipseProtocol.Core
         private void OnDisable()
         {
             SetPlayer(null);
-        }
-
-        private void Update()
-        {
-            if (!_isRunning)
-            {
-                return;
-            }
-
-            DeductScore(ScoreLossPerSecond * Time.deltaTime);
+            SetTimer(null);
         }
 
         public void Configure(GameBalanceData data)
@@ -81,6 +73,26 @@ namespace EclipseProtocol.Core
             }
         }
 
+        public void SetTimer(RunTimer timer)
+        {
+            if (_timer == timer)
+            {
+                return;
+            }
+
+            if (_timer != null)
+            {
+                _timer.TimeElapsed -= HandleTimeElapsed;
+            }
+
+            _timer = timer;
+
+            if (_timer != null)
+            {
+                _timer.TimeElapsed += HandleTimeElapsed;
+            }
+        }
+
         public void StartScoring()
         {
             _isRunning = true;
@@ -101,6 +113,16 @@ namespace EclipseProtocol.Core
         private void HandlePlayerDamageTaken(float healthLost)
         {
             DeductScore(healthLost * ScoreLossPerHealthPoint);
+        }
+
+        private void HandleTimeElapsed(float deltaTime)
+        {
+            if (!_isRunning)
+            {
+                return;
+            }
+
+            DeductScore(ScoreLossPerSecond * deltaTime);
         }
 
         private void DeductScore(float amount)

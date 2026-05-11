@@ -14,6 +14,7 @@ namespace EclipseProtocol.Core
         private bool _hasExpired;
 
         public event Action Expired;
+        public event Action<float> TimeElapsed;
         public float DurationSeconds { get; private set; }
         public float RemainingSeconds { get; private set; }
         public float NormalizedRemaining => DurationSeconds <= 0f ? 0f : Mathf.Clamp01(RemainingSeconds / DurationSeconds);
@@ -43,7 +44,9 @@ namespace EclipseProtocol.Core
                 return;
             }
 
-            RemainingSeconds = Mathf.Max(0f, RemainingSeconds - Time.deltaTime);
+            float deltaTime = Time.deltaTime;
+            TimeElapsed?.Invoke(deltaTime);
+            RemainingSeconds = Mathf.Max(0f, RemainingSeconds - deltaTime);
             if (RemainingSeconds <= 0f)
             {
                 _hasExpired = true;

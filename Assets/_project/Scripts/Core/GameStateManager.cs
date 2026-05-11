@@ -15,6 +15,7 @@ namespace EclipseProtocol.Core
         [SerializeField] private HUDController hudController;
         [SerializeField] private RunTimer runTimer;
         [SerializeField] private RunScore runScore;
+        [SerializeField] private EnergyCellSystem energyCellSystem;
 
         private PlayerController _player;
         private readonly HashSet<RepairNode> _repairNodes = new HashSet<RepairNode>();
@@ -67,6 +68,11 @@ namespace EclipseProtocol.Core
                 runScore = FindAnyObjectByType<RunScore>();
             }
 
+            if (energyCellSystem == null)
+            {
+                energyCellSystem = EnergyCellSystem.Instance;
+            }
+
             if (runScore == null)
             {
                 runScore = gameObject.AddComponent<RunScore>();
@@ -74,6 +80,7 @@ namespace EclipseProtocol.Core
 
             RegisterTimer(runTimer);
             RegisterScore(runScore);
+            hudController?.SetEnergyCellSystem(energyCellSystem);
             if (_repairNodes.Count > 0)
             {
                 UpdateRepairObjective();
@@ -138,6 +145,7 @@ namespace EclipseProtocol.Core
 
             runTimer = timer;
             runTimer.Expired += TriggerLoss;
+            runScore?.SetTimer(runTimer);
             hudController?.SetTimer(runTimer);
         }
 
@@ -150,6 +158,7 @@ namespace EclipseProtocol.Core
 
             runScore = score;
             runScore.SetPlayer(_player);
+            runScore.SetTimer(runTimer);
             hudController?.SetScore(runScore);
         }
 
