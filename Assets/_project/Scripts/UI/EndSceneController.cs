@@ -9,6 +9,7 @@ namespace EclipseProtocol.UI
     {
         [SerializeField] private Button menuButton;
         [SerializeField] private Button retryButton;
+        [SerializeField] private Text scoreText;
         [SerializeField] private string menuSceneName = "Menu";
         [SerializeField] private string gameplaySceneName = "Gameplay";
 
@@ -22,6 +23,11 @@ namespace EclipseProtocol.UI
             if (retryButton != null)
             {
                 retryButton.onClick.AddListener(Retry);
+            }
+
+            if (scoreText != null)
+            {
+                scoreText.text = $"Score {RunScore.LastRunScore:0000}";
             }
         }
 

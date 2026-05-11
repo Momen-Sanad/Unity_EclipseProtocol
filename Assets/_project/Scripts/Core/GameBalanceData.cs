@@ -34,6 +34,9 @@ namespace EclipseProtocol.Core
 
         [Header("Phase 2 Run")]
         [Min(15f)] public float runTimerSeconds = 180f;
+        [Min(0)] public int startingScore = 5000;
+        [Min(0f)] public float scoreLossPerSecond = 10f;
+        [Min(0f)] public float scoreLossPerHealthPoint = 25f;
         [Min(1)] public int corridorRoomCount = 2;
         [Min(0)] public int maxPlacementAttempts = 8;
         [Min(0f)] public float roomOverlapPadding = 0.25f;

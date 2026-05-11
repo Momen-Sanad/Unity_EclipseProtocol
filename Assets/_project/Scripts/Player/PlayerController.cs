@@ -1,3 +1,4 @@
+using System;
 using EclipseProtocol.Core;
 using EclipseProtocol.Audio;
 using Ilumisoft.HealthSystem;
@@ -49,6 +50,8 @@ namespace EclipseProtocol.Player
         public bool IsDashing => _isDashing;
         public bool IsGrounded { get; private set; }
         public bool IsInvulnerable { get; private set; }
+
+        public event Action<float> DamageTaken;
 
         private void Reset()
         {
@@ -224,6 +227,7 @@ namespace EclipseProtocol.Player
             CurrentHealth = Mathf.Max(0f, CurrentHealth - amount);
             if (CurrentHealth < previousHealth)
             {
+                DamageTaken?.Invoke(previousHealth - CurrentHealth);
                 AudioManager.Instance?.PlayDamage(transform.position);
             }
 

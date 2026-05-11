@@ -14,6 +14,7 @@ namespace EclipseProtocol.Core
         [SerializeField] private string lossSceneName = "Loss";
         [SerializeField] private HUDController hudController;
         [SerializeField] private RunTimer runTimer;
+        [SerializeField] private RunScore runScore;
 
         private PlayerController _player;
         private readonly HashSet<RepairNode> _repairNodes = new HashSet<RepairNode>();
@@ -61,7 +62,18 @@ namespace EclipseProtocol.Core
                 runTimer = FindAnyObjectByType<RunTimer>();
             }
 
+            if (runScore == null)
+            {
+                runScore = FindAnyObjectByType<RunScore>();
+            }
+
+            if (runScore == null)
+            {
+                runScore = gameObject.AddComponent<RunScore>();
+            }
+
             RegisterTimer(runTimer);
+            RegisterScore(runScore);
             if (_repairNodes.Count > 0)
             {
                 UpdateRepairObjective();
@@ -89,6 +101,7 @@ namespace EclipseProtocol.Core
         {
             _player = player;
             hudController?.SetPlayer(player);
+            runScore?.SetPlayer(player);
         }
 
         public void ResetRunObjectives()
@@ -96,6 +109,8 @@ namespace EclipseProtocol.Core
             IsPowerRepaired = false;
             _repairNodes.Clear();
             _repairedNodes.Clear();
+            runScore?.ResetScore();
+            runScore?.StartScoring();
             hudController?.SetObjective("Repair node 1");
         }
 
@@ -124,6 +139,18 @@ namespace EclipseProtocol.Core
             runTimer = timer;
             runTimer.Expired += TriggerLoss;
             hudController?.SetTimer(runTimer);
+        }
+
+        public void RegisterScore(RunScore score)
+        {
+            if (score == null)
+            {
+                return;
+            }
+
+            runScore = score;
+            runScore.SetPlayer(_player);
+            hudController?.SetScore(runScore);
         }
 
         public void MarkPowerRepaired(RepairNode repairNode)
@@ -179,6 +206,7 @@ namespace EclipseProtocol.Core
 
             _endingRun = true;
             runTimer?.StopTimer();
+            runScore?.StopScoring();
             Time.timeScale = 1f;
             AudioManager.Instance?.PlayVictory(Vector3.zero);
             SceneManager.LoadScene(victorySceneName);
@@ -193,6 +221,7 @@ namespace EclipseProtocol.Core
 
             _endingRun = true;
             runTimer?.StopTimer();
+            runScore?.StopScoring();
             Time.timeScale = 1f;
             AudioManager.Instance?.PlayLoss(Vector3.zero);
             SceneManager.LoadScene(lossSceneName);

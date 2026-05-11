@@ -22,6 +22,7 @@ namespace EclipseProtocol.UI
         [SerializeField] private Text energyText;
         [SerializeField] private Text dashText;
         [SerializeField] private Text timerText;
+        [SerializeField] private Text scoreText;
         [SerializeField] private Text objectiveText;
         [SerializeField] private Text messageText;
         [SerializeField] private GameObject repairProgressRoot;
@@ -43,6 +44,7 @@ namespace EclipseProtocol.UI
 
         private PlayerController _player;
         private RunTimer _timer;
+        private RunScore _score;
         private float _messageTimer;
 
         public GameObject PauseOverlay => pauseOverlay;
@@ -78,6 +80,7 @@ namespace EclipseProtocol.UI
         {
             UpdatePlayerStats();
             UpdateTimer();
+            UpdateScore();
             UpdateMessage();
         }
 
@@ -89,6 +92,13 @@ namespace EclipseProtocol.UI
         public void SetTimer(RunTimer timer)
         {
             _timer = timer;
+        }
+
+        public void SetScore(RunScore score)
+        {
+            _score = score;
+            EnsureScoreText();
+            UpdateScore();
         }
 
         public void SetObjective(string text)
@@ -216,6 +226,20 @@ namespace EclipseProtocol.UI
             }
         }
 
+        private void UpdateScore()
+        {
+            if (_score == null)
+            {
+                return;
+            }
+
+            EnsureScoreText();
+            if (scoreText != null)
+            {
+                scoreText.text = $"Score {_score.CurrentScore:0000}";
+            }
+        }
+
         private void UpdateMessage()
         {
             if (messageText == null || _messageTimer <= 0f)
@@ -227,6 +251,27 @@ namespace EclipseProtocol.UI
             if (_messageTimer <= 0f)
             {
                 messageText.text = string.Empty;
+            }
+        }
+
+        private void EnsureScoreText()
+        {
+            if (scoreText != null || timerText == null)
+            {
+                return;
+            }
+
+            scoreText = Instantiate(timerText, timerText.transform.parent);
+            scoreText.name = "ScoreText";
+            scoreText.text = string.Empty;
+
+            if (scoreText.transform is RectTransform scoreRect && timerText.transform is RectTransform timerRect)
+            {
+                scoreRect.anchorMin = timerRect.anchorMin;
+                scoreRect.anchorMax = timerRect.anchorMax;
+                scoreRect.pivot = timerRect.pivot;
+                scoreRect.anchoredPosition = timerRect.anchoredPosition + new Vector2(0f, -28f);
+                scoreRect.sizeDelta = timerRect.sizeDelta;
             }
         }
 
