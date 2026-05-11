@@ -387,6 +387,8 @@ namespace EclipseProtocol.AI
             navMeshAgent.speed = baseSpeed * 1.15f;
             navMeshAgent.acceleration = baseAcceleration;
             navMeshAgent.stoppingDistance = baseStoppingDistance;
+            navMeshAgent.autoRepath = true;
+            navMeshAgent.avoidancePriority = 20 + Mathf.Abs(GetInstanceID()) % 30;
 
             if (_contactDamage != null)
             {

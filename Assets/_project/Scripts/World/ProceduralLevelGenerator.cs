@@ -847,18 +847,24 @@ namespace EclipseProtocol.World
             int waypointCount = _rng.Next(3, 5);
             GameObject routeRoot = new GameObject($"PatrolRoute_R{room.Index + 1:00}_{enemyIndex + 1:00}");
             routeRoot.transform.SetParent(room.Root.transform, false);
+            List<Vector3> reservedPatrolPositions = new List<Vector3>(room.ReservedPositions);
+            reservedPatrolPositions.AddRange(room.PatrolWaypointPositions);
 
             for (int i = 0; i < waypointCount; i++)
             {
-                if (!TryGetOpenRoomPosition(room, 2f, waypoints.ConvertAll(waypoint => waypoint.position), out Vector3 position))
+                if (!TryGetOpenRoomPosition(room, 3.25f, reservedPatrolPositions, out Vector3 position))
                 {
-                    position = room.Center;
+                    continue;
                 }
 
+                Vector3 sampledPosition = SampleNavMesh(position);
                 GameObject waypointObject = new GameObject($"Waypoint_{i + 1:00}");
                 waypointObject.transform.SetParent(routeRoot.transform, false);
-                waypointObject.transform.position = SampleNavMesh(position);
+                waypointObject.transform.position = sampledPosition;
                 waypoints.Add(waypointObject.transform);
+                reservedPatrolPositions.Add(sampledPosition);
+                room.ReservedPositions.Add(sampledPosition);
+                room.PatrolWaypointPositions.Add(sampledPosition);
             }
 
             return waypoints;
@@ -1054,6 +1060,7 @@ namespace EclipseProtocol.World
             public DoorGate ForwardDoor { get; set; }
             public List<Vector3> ReservedPositions { get; } = new List<Vector3>();
             public List<Bounds> ObstacleFootprints { get; } = new List<Bounds>();
+            public List<Vector3> PatrolWaypointPositions { get; } = new List<Vector3>();
 
             public bool HasDoorOn(Vector2Int direction)
             {

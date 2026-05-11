@@ -15,8 +15,13 @@ namespace EclipseProtocol.AI
         [SerializeField] private bool constrainToRoom;
         [SerializeField] private Bounds movementBounds;
         [SerializeField, Min(0.1f)] private float roomEdgePadding = 0.75f;
+        [SerializeField, Min(0.1f)] private float stuckVelocityThreshold = 0.08f;
+        [SerializeField, Min(0.25f)] private float stuckRecoverySeconds = 1.25f;
+        [SerializeField, Min(0.1f)] private float stuckRepathInterval = 0.4f;
 
         private int _currentWaypointIndex;
+        private float _stuckTimer;
+        private float _stuckRepathTimer;
 
         public IReadOnlyList<Transform> Waypoints => waypoints;
         public GameBalanceData BalanceData => balanceData;
@@ -84,14 +89,11 @@ namespace EclipseProtocol.AI
                 return;
             }
 
+            RecoverIfStuck();
+
             if (navMeshAgent.remainingDistance <= Mathf.Max(waypointTolerance, navMeshAgent.stoppingDistance))
             {
-                _currentWaypointIndex = (_currentWaypointIndex + 1) % waypoints.Count;
-                Transform nextWaypoint = waypoints[_currentWaypointIndex];
-                if (nextWaypoint != null)
-                {
-                    navMeshAgent.SetDestination(ClampToMovementBounds(nextWaypoint.position));
-                }
+                AdvanceToNextWaypoint();
             }
         }
 
@@ -105,6 +107,63 @@ namespace EclipseProtocol.AI
             navMeshAgent.speed = balanceData.droneMoveSpeed;
             navMeshAgent.acceleration = balanceData.droneAcceleration;
             navMeshAgent.stoppingDistance = balanceData.droneStoppingDistance;
+            navMeshAgent.autoBraking = false;
+            navMeshAgent.autoRepath = true;
+            navMeshAgent.avoidancePriority = 30 + Mathf.Abs(GetInstanceID()) % 40;
+        }
+
+        private void RecoverIfStuck()
+        {
+            if (navMeshAgent == null || !navMeshAgent.isOnNavMesh || !navMeshAgent.hasPath)
+            {
+                _stuckTimer = 0f;
+                _stuckRepathTimer = 0f;
+                return;
+            }
+
+            float arrivalDistance = Mathf.Max(waypointTolerance, navMeshAgent.stoppingDistance) + 0.25f;
+            bool tryingToMove = navMeshAgent.desiredVelocity.sqrMagnitude > stuckVelocityThreshold * stuckVelocityThreshold;
+            bool barelyMoving = navMeshAgent.velocity.sqrMagnitude < stuckVelocityThreshold * stuckVelocityThreshold;
+            bool stillFarFromDestination = navMeshAgent.remainingDistance > arrivalDistance;
+            if (!tryingToMove || !barelyMoving || !stillFarFromDestination)
+            {
+                _stuckTimer = 0f;
+                _stuckRepathTimer = 0f;
+                return;
+            }
+
+            _stuckTimer += Time.deltaTime;
+            _stuckRepathTimer -= Time.deltaTime;
+            if (_stuckRepathTimer <= 0f && waypoints[_currentWaypointIndex] != null)
+            {
+                _stuckRepathTimer = stuckRepathInterval;
+                navMeshAgent.SetDestination(ClampToMovementBounds(waypoints[_currentWaypointIndex].position));
+            }
+
+            if (_stuckTimer < stuckRecoverySeconds)
+            {
+                return;
+            }
+
+            navMeshAgent.ResetPath();
+            _stuckTimer = 0f;
+            _stuckRepathTimer = 0f;
+            AdvanceToNextWaypoint();
+        }
+
+        private void AdvanceToNextWaypoint()
+        {
+            if (waypoints.Count == 0)
+            {
+                return;
+            }
+
+            _currentWaypointIndex = (_currentWaypointIndex + 1) % waypoints.Count;
+            Transform nextWaypoint = waypoints[_currentWaypointIndex];
+            if (nextWaypoint != null)
+            {
+                navMeshAgent.SetDestination(ClampToMovementBounds(nextWaypoint.position));
+            }
         }
 
         private void EnforceMovementBounds()
