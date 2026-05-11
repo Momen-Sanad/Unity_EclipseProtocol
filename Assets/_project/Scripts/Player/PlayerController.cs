@@ -218,13 +218,14 @@ namespace EclipseProtocol.Player
 
         public void TakeDamage(float amount)
         {
-            if (IsInvulnerable || amount <= 0f)
+            float effectiveAmount = balanceData != null ? balanceData.GetEffectiveDamageTaken(amount) : amount;
+            if (IsInvulnerable || effectiveAmount <= 0f)
             {
                 return;
             }
 
             float previousHealth = CurrentHealth;
-            CurrentHealth = Mathf.Max(0f, CurrentHealth - amount);
+            CurrentHealth = Mathf.Max(0f, CurrentHealth - effectiveAmount);
             if (CurrentHealth < previousHealth)
             {
                 DamageTaken?.Invoke(previousHealth - CurrentHealth);

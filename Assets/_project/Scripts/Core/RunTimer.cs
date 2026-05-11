@@ -22,7 +22,7 @@ namespace EclipseProtocol.Core
 
         private void Awake()
         {
-            DurationSeconds = balanceData != null ? balanceData.runTimerSeconds : fallbackDurationSeconds;
+            DurationSeconds = balanceData != null ? balanceData.GetEffectiveRunTimerSeconds() : fallbackDurationSeconds;
             RemainingSeconds = DurationSeconds;
         }
 
@@ -58,7 +58,7 @@ namespace EclipseProtocol.Core
         public void Configure(GameBalanceData data)
         {
             balanceData = data;
-            DurationSeconds = balanceData != null ? balanceData.runTimerSeconds : fallbackDurationSeconds;
+            DurationSeconds = balanceData != null ? balanceData.GetEffectiveRunTimerSeconds() : fallbackDurationSeconds;
             RemainingSeconds = DurationSeconds;
             _hasExpired = false;
         }

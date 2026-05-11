@@ -203,6 +203,10 @@ namespace EclipseProtocol.World
             int minCount = Mathf.Max(3, minRoomCount);
             int maxCount = Mathf.Max(minCount, maxRoomCount);
             int roomCount = _rng.Next(minCount, maxCount + 1);
+            if (balanceData != null)
+            {
+                roomCount = Mathf.Clamp(balanceData.GetEffectiveRoomCount(roomCount), 3, Mathf.Max(3, maxCount + Mathf.Abs(balanceData.GetDifficultySettings().roomCountOffset)));
+            }
 
             GeneratedRoom firstRoom = new GeneratedRoom(0, Vector3.zero, RollRoomWidth(), RollRoomDepth());
             _generatedRooms.Add(firstRoom);
@@ -681,8 +685,8 @@ namespace EclipseProtocol.World
             {
                 GeneratedRoom room = _generatedRooms[i];
                 int energyCount = Mathf.Min(previousEnergyCount, RollEnergyCellCount(i));
-                int enemyCount = Mathf.Max(previousEnemyCount, RollEnemyCount(i));
-                int powerCount = Mathf.Max(previousPowerCount, RollPowerCellCount(i));
+                int enemyCount = Mathf.Max(previousEnemyCount, GetEffectiveEnemyCount(RollEnemyCount(i)));
+                int powerCount = Mathf.Max(previousPowerCount, GetEffectivePowerNodeCount(RollPowerCellCount(i)));
 
                 if (room.ForwardDoor != null && requireRepairPerRoom)
                 {
@@ -716,6 +720,16 @@ namespace EclipseProtocol.World
             int ceiling = Mathf.RoundToInt(Mathf.Lerp(maxEnergyCellsFirstRoom, minEnergyCellsLastRoom, t));
             ceiling = Mathf.Max(0, ceiling);
             return ceiling <= 0 ? 0 : _rng.Next(0, ceiling + 1);
+        }
+
+        private int GetEffectiveEnemyCount(int baseEnemyCount)
+        {
+            return balanceData != null ? balanceData.GetEffectiveEnemyCount(baseEnemyCount) : baseEnemyCount;
+        }
+
+        private int GetEffectivePowerNodeCount(int basePowerNodeCount)
+        {
+            return balanceData != null ? balanceData.GetEffectivePowerNodeCount(basePowerNodeCount) : basePowerNodeCount;
         }
 
         private int RollEnemyCount(int roomIndex)

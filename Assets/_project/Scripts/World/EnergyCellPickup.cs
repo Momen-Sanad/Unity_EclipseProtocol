@@ -16,7 +16,7 @@ namespace EclipseProtocol.World
         {
             if (balanceData != null)
             {
-                energyRestoreAmount = balanceData.energyCellRestoreAmount;
+                energyRestoreAmount = balanceData.GetEffectiveEnergyCellRestoreAmount();
             }
 
             Collider pickupCollider = GetComponent<Collider>();

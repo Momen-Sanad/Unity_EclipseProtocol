@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 
 namespace EclipseProtocol.Core
@@ -8,6 +9,17 @@ namespace EclipseProtocol.Core
         order = 0)]
     public class GameBalanceData : ScriptableObject
     {
+        [Serializable]
+        public class DifficultySettings
+        {
+            [Min(0.1f)] public float energyRestorationMultiplier = 1f;
+            [Min(0f)] public float damageTakenMultiplier = 1f;
+            [Min(0f)] public float enemyCountMultiplier = 1f;
+            [Min(0f)] public float powerNodeCountMultiplier = 1f;
+            public int roomCountOffset;
+            [Min(0.1f)] public float completionTimeMultiplier = 1f;
+        }
+
         [Header("Player Stats")]
         [Min(1f)] public float maxHealth = 100f;
         [Min(1f)] public float maxEnergy = 100f;
@@ -61,5 +73,76 @@ namespace EclipseProtocol.Core
 
         [Header("Energy Pickup")]
         [Min(1f)] public float energyCellRestoreAmount = 25f;
+
+        [Header("Difficulty")]
+        public DifficultySettings easy = new DifficultySettings
+        {
+            energyRestorationMultiplier = 1.4f,
+            damageTakenMultiplier = 0.75f,
+            enemyCountMultiplier = 0.7f,
+            powerNodeCountMultiplier = 0.75f,
+            roomCountOffset = -1,
+            completionTimeMultiplier = 1.25f
+        };
+
+        public DifficultySettings medium = new DifficultySettings();
+
+        public DifficultySettings hard = new DifficultySettings
+        {
+            energyRestorationMultiplier = 0.7f,
+            damageTakenMultiplier = 1.35f,
+            enemyCountMultiplier = 1.35f,
+            powerNodeCountMultiplier = 1.35f,
+            roomCountOffset = 2,
+            completionTimeMultiplier = 0.75f
+        };
+
+        public DifficultySettings GetDifficultySettings()
+        {
+            return GetDifficultySettings(RunDifficultyData.CurrentDifficulty);
+        }
+
+        public DifficultySettings GetDifficultySettings(DifficultyMode difficulty)
+        {
+            switch (difficulty)
+            {
+                case DifficultyMode.Easy:
+                    return easy ?? medium ?? new DifficultySettings();
+                case DifficultyMode.Hard:
+                    return hard ?? medium ?? new DifficultySettings();
+                default:
+                    return medium ?? new DifficultySettings();
+            }
+        }
+
+        public float GetEffectiveEnergyCellRestoreAmount()
+        {
+            return energyCellRestoreAmount * GetDifficultySettings().energyRestorationMultiplier;
+        }
+
+        public float GetEffectiveDamageTaken(float damage)
+        {
+            return damage * GetDifficultySettings().damageTakenMultiplier;
+        }
+
+        public float GetEffectiveRunTimerSeconds()
+        {
+            return runTimerSeconds * GetDifficultySettings().completionTimeMultiplier;
+        }
+
+        public int GetEffectiveRoomCount(int baseRoomCount)
+        {
+            return Mathf.Max(3, baseRoomCount + GetDifficultySettings().roomCountOffset);
+        }
+
+        public int GetEffectiveEnemyCount(int baseEnemyCount)
+        {
+            return Mathf.Max(0, Mathf.RoundToInt(baseEnemyCount * GetDifficultySettings().enemyCountMultiplier));
+        }
+
+        public int GetEffectivePowerNodeCount(int basePowerNodeCount)
+        {
+            return Mathf.Max(0, Mathf.RoundToInt(basePowerNodeCount * GetDifficultySettings().powerNodeCountMultiplier));
+        }
     }
 }
