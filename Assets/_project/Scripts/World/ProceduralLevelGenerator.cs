@@ -76,6 +76,7 @@ namespace EclipseProtocol.World
         [SerializeField, Min(2f)] private float doorWidth = 5f;
         [SerializeField, Min(2f)] private float doorHeight = 3.2f;
         [SerializeField, Min(0.1f)] private float doorThickness = 0.35f;
+        [SerializeField, Min(0f)] private float doorSurfaceOffset = 0.04f;
         [SerializeField, Min(1f)] private float doorSlideHeight = 3.6f;
         [SerializeField] private Color floorColor = new Color(0.13f, 0.16f, 0.18f);
         [SerializeField] private Color wallColor = new Color(0.28f, 0.32f, 0.36f);
@@ -320,6 +321,11 @@ namespace EclipseProtocol.World
 
         private void CreateWallSide(GeneratedRoom room, Vector2Int side)
         {
+            if (side == room.EntryDirection)
+            {
+                return;
+            }
+
             bool hasDoor = room.HasDoorOn(side);
             if (!hasDoor)
             {
@@ -634,7 +640,7 @@ namespace EclipseProtocol.World
             GameObject panelObject = GameObject.CreatePrimitive(PrimitiveType.Cube);
             panelObject.name = "SlidingPanel";
             panelObject.transform.SetParent(gateObject.transform, false);
-            panelObject.transform.localPosition = new Vector3(0f, doorHeight * 0.5f, 0f);
+            panelObject.transform.localPosition = new Vector3(0f, doorHeight * 0.5f, doorSurfaceOffset);
             panelObject.transform.localScale = new Vector3(doorWidth, doorHeight, doorThickness);
             Tint(panelObject, lockedDoorColor);
 
