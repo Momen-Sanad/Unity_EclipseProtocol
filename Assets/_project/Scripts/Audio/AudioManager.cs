@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace EclipseProtocol.Audio
 {
@@ -8,20 +9,28 @@ namespace EclipseProtocol.Audio
 
         [SerializeField, Range(0f, 1f)] private float sfxVolume = 0.55f;
         [SerializeField, Range(0f, 1f)] private float musicVolume = 0.18f;
+        [SerializeField, Min(0.01f)] private float musicFadeSeconds = 1.25f;
+
+        [Header("Music")]
+        [SerializeField] private AudioClip startMenuMusicClip;
+        [SerializeField] private AudioClip victoryMusicClip;
+        [SerializeField] private AudioClip lossMusicClip;
+
+        [Header("SFX")]
+        [SerializeField] private AudioClip dashClip;
+        [SerializeField] private AudioClip pickupClip;
+        [SerializeField] private AudioClip damageClip;
+        [SerializeField] private AudioClip footstepsClip;
 
         private static AudioManager _instance;
         private AudioSource _sfxSource;
         private AudioSource _musicSource;
-        private AudioClip _dashClip;
-        private AudioClip _pickupClip;
+        private AudioSource _footstepsSource;
         private AudioClip _repairClip;
-        private AudioClip _damageClip;
         private AudioClip _warningClip;
         private AudioClip _lungeClip;
         private AudioClip _lockedClip;
-        private AudioClip _victoryClip;
-        private AudioClip _lossClip;
-        private AudioClip _ambientLoop;
+        private Coroutine _musicFadeRoutine;
 
         public static AudioManager Instance
         {
@@ -59,6 +68,16 @@ namespace EclipseProtocol.Audio
             EnsureReady();
         }
 
+        private void OnEnable()
+        {
+            SceneManager.sceneLoaded += HandleSceneLoaded;
+        }
+
+        private void OnDisable()
+        {
+            SceneManager.sceneLoaded -= HandleSceneLoaded;
+        }
+
         private void OnDestroy()
         {
             if (_instance == this)
@@ -69,17 +88,17 @@ namespace EclipseProtocol.Audio
 
         private void Start()
         {
-            PlayAmbientLoop();
+            ApplySceneAudio(SceneManager.GetActiveScene().name);
         }
 
         public void PlayDash(Vector3 position)
         {
-            PlayOneShot(_dashClip, position, 0.85f);
+            PlayOneShot(dashClip, position, 0.85f);
         }
 
         public void PlayPickup(Vector3 position)
         {
-            PlayOneShot(_pickupClip, position, 0.8f);
+            PlayOneShot(pickupClip, position, 0.8f);
         }
 
         public void PlayRepairComplete(Vector3 position)
@@ -89,7 +108,7 @@ namespace EclipseProtocol.Audio
 
         public void PlayDamage(Vector3 position)
         {
-            PlayOneShot(_damageClip, position, 0.9f);
+            PlayOneShot(damageClip, position, 0.9f);
         }
 
         public void PlayWarning(Vector3 position)
@@ -109,26 +128,40 @@ namespace EclipseProtocol.Audio
 
         public void PlayVictory(Vector3 position)
         {
-            PlayOneShot(_victoryClip, position, 1f);
+            PlayMusic(victoryMusicClip, false, 0f);
         }
 
         public void PlayLoss(Vector3 position)
         {
-            PlayOneShot(_lossClip, position, 1f);
+            PlayMusic(lossMusicClip, false, 0f);
         }
 
-        private void PlayAmbientLoop()
+        public void SetFootstepsMoving(bool isMoving, Vector3 position)
         {
             EnsureReady();
-            if (_musicSource == null || _musicSource.isPlaying)
+            if (_footstepsSource == null || footstepsClip == null)
             {
                 return;
             }
 
-            _musicSource.clip = _ambientLoop;
-            _musicSource.loop = true;
-            _musicSource.volume = musicVolume;
-            _musicSource.Play();
+            _footstepsSource.transform.position = position;
+            if (isMoving)
+            {
+                if (!_footstepsSource.isPlaying)
+                {
+                    _footstepsSource.clip = footstepsClip;
+                    _footstepsSource.loop = true;
+                    _footstepsSource.volume = sfxVolume;
+                    _footstepsSource.Play();
+                }
+
+                return;
+            }
+
+            if (_footstepsSource.isPlaying)
+            {
+                _footstepsSource.Stop();
+            }
         }
 
         private void PlayOneShot(AudioClip clip, Vector3 position, float volumeScale)
@@ -141,6 +174,105 @@ namespace EclipseProtocol.Audio
 
             _sfxSource.transform.position = position;
             _sfxSource.PlayOneShot(clip, sfxVolume * volumeScale);
+        }
+
+        private void HandleSceneLoaded(Scene scene, LoadSceneMode mode)
+        {
+            ApplySceneAudio(scene.name);
+        }
+
+        private void ApplySceneAudio(string sceneName)
+        {
+            EnsureReady();
+            SetFootstepsMoving(false, Vector3.zero);
+
+            switch (sceneName)
+            {
+                case "Start_Screen":
+                case "Menu":
+                case "Difficulity":
+                    PlayMusic(startMenuMusicClip, true, 0f);
+                    break;
+                case "Gameplay":
+                    FadeOutMusic();
+                    break;
+                case "Victory":
+                    PlayMusic(victoryMusicClip, false, 0f);
+                    break;
+                case "Loss":
+                    PlayMusic(lossMusicClip, false, 0f);
+                    break;
+            }
+        }
+
+        private void PlayMusic(AudioClip clip, bool loop, float fadeSeconds)
+        {
+            EnsureReady();
+            if (_musicSource == null || clip == null)
+            {
+                return;
+            }
+
+            if (_musicFadeRoutine != null)
+            {
+                StopCoroutine(_musicFadeRoutine);
+                _musicFadeRoutine = null;
+            }
+
+            if (_musicSource.clip == clip && _musicSource.isPlaying)
+            {
+                _musicSource.loop = loop;
+                _musicSource.volume = musicVolume;
+                return;
+            }
+
+            _musicSource.clip = clip;
+            _musicSource.loop = loop;
+            _musicSource.volume = fadeSeconds <= 0f ? musicVolume : 0f;
+            _musicSource.Play();
+
+            if (fadeSeconds > 0f)
+            {
+                _musicFadeRoutine = StartCoroutine(FadeMusicVolume(musicVolume, fadeSeconds, false));
+            }
+        }
+
+        private void FadeOutMusic()
+        {
+            EnsureReady();
+            if (_musicSource == null || !_musicSource.isPlaying)
+            {
+                return;
+            }
+
+            if (_musicFadeRoutine != null)
+            {
+                StopCoroutine(_musicFadeRoutine);
+            }
+
+            _musicFadeRoutine = StartCoroutine(FadeMusicVolume(0f, musicFadeSeconds, true));
+        }
+
+        private System.Collections.IEnumerator FadeMusicVolume(float targetVolume, float duration, bool stopWhenDone)
+        {
+            float startVolume = _musicSource.volume;
+            float elapsed = 0f;
+
+            while (elapsed < duration)
+            {
+                elapsed += Time.unscaledDeltaTime;
+                _musicSource.volume = Mathf.Lerp(startVolume, targetVolume, Mathf.Clamp01(elapsed / duration));
+                yield return null;
+            }
+
+            _musicSource.volume = targetVolume;
+            if (stopWhenDone)
+            {
+                _musicSource.Stop();
+                _musicSource.clip = null;
+            }
+
+            _musicFadeRoutine = null;
         }
 
         private void EnsureReady()
@@ -161,16 +293,22 @@ namespace EclipseProtocol.Audio
                 _musicSource.spatialBlend = 0f;
             }
 
-            _dashClip ??= CreateTone("DashPulse", 620f, 0.12f, 0.35f);
-            _pickupClip ??= CreateTone("EnergyPickup", 880f, 0.16f, 0.32f);
+            if (_footstepsSource == null)
+            {
+                _footstepsSource = gameObject.AddComponent<AudioSource>();
+                _footstepsSource.playOnAwake = false;
+                _footstepsSource.spatialBlend = 0.45f;
+                _footstepsSource.rolloffMode = AudioRolloffMode.Linear;
+                _footstepsSource.maxDistance = 18f;
+            }
+
+            dashClip ??= CreateTone("DashPulse", 620f, 0.12f, 0.35f);
+            pickupClip ??= CreateTone("EnergyPickup", 880f, 0.16f, 0.32f);
             _repairClip ??= CreateTone("RepairComplete", 520f, 0.32f, 0.36f, 780f);
-            _damageClip ??= CreateTone("DamageHit", 145f, 0.22f, 0.42f);
+            damageClip ??= CreateTone("DamageHit", 145f, 0.22f, 0.42f);
             _warningClip ??= CreateTone("HunterWarning", 300f, 0.18f, 0.28f, 420f);
             _lungeClip ??= CreateTone("HunterLunge", 190f, 0.2f, 0.34f, 90f);
             _lockedClip ??= CreateTone("ExtractionLocked", 160f, 0.18f, 0.3f);
-            _victoryClip ??= CreateTone("VictoryCue", 660f, 0.45f, 0.34f, 990f);
-            _lossClip ??= CreateTone("LossCue", 220f, 0.5f, 0.36f, 110f);
-            _ambientLoop ??= CreateTone("StationAmbient", 74f, 2.5f, 0.08f, 111f);
         }
 
         private bool CanPersistAcrossScenes()

@@ -134,6 +134,13 @@ namespace EclipseProtocol.Player
             Vector3 currentVelocity = playerRigidbody.velocity;
             playerRigidbody.velocity = new Vector3(planarVelocity.x, currentVelocity.y, planarVelocity.z);
 #endif
+
+            AudioManager.Instance?.SetFootstepsMoving(planarVelocity.sqrMagnitude > 0.01f, transform.position);
+        }
+
+        private void OnDisable()
+        {
+            AudioManager.Instance?.SetFootstepsMoving(false, transform.position);
         }
 
         public bool TryDash()
