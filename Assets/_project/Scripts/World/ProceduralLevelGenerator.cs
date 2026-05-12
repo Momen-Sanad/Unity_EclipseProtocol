@@ -790,6 +790,8 @@ namespace EclipseProtocol.World
                     continue;
                 }
 
+                position.y = 0.7f;
+                
                 RepairNode repairNode = Instantiate(repairNodePrefab, position, Quaternion.identity, levelRoot);
                 repairNode.name = $"PowerNode_R{room.Index + 1:00}_{i + 1:00}";
                 repairNode.Configure(balanceData, room.ForwardDoor);

@@ -33,7 +33,7 @@ namespace EclipseProtocol.World
         private void Awake()
         {
             Collider repairCollider = GetComponent<Collider>();
-            repairCollider.isTrigger = true;
+            // repairCollider.isTrigger = true;
 
             if (statusRenderer == null)
             {
