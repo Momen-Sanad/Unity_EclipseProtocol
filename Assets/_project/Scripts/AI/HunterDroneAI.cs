@@ -36,14 +36,19 @@ namespace EclipseProtocol.AI
         [SerializeField] private bool constrainToRoom;
         [SerializeField] private Bounds movementBounds;
         [SerializeField, Min(0.1f)] private float roomEdgePadding = 0.75f;
+        [SerializeField, Min(0.5f)] private float roamPointMinDistance = 2f;
+        [SerializeField, Min(0.1f)] private float stalledVelocityThreshold = 0.08f;
+        [SerializeField, Min(0.1f)] private float stalledRepathSeconds = 0.5f;
 
         private EnemyContactDamage _contactDamage;
         private HunterState _state = HunterState.Idle;
         private Vector3 _homePosition;
         private Vector3 _lungeDirection;
+        private Vector3 _patrolDestination;
         private MaterialPropertyBlock _statePropertyBlock;
         private float _stateTimer;
         private float _repathTimer;
+        private float _stalledRepathTimer;
         private float _nextAttackTime;
         private int _patrolIndex;
 
@@ -66,7 +71,7 @@ namespace EclipseProtocol.AI
             }
 
             ApplyAgentSettings();
-            EnterState(patrolPoints.Count > 0 ? HunterState.Patrol : HunterState.Idle);
+            EnterState(HunterState.Patrol);
         }
 
         public void SetMovementBounds(Bounds bounds)
@@ -112,7 +117,7 @@ namespace EclipseProtocol.AI
 
         private void Start()
         {
-            EnterState(patrolPoints.Count > 0 ? HunterState.Patrol : HunterState.Idle);
+            EnterState(HunterState.Patrol);
         }
 
         private void Update()
@@ -123,10 +128,6 @@ namespace EclipseProtocol.AI
             }
 
             EnforceMovementBounds();
-            if (target == null)
-            {
-                return;
-            }
 
             switch (_state)
             {
@@ -172,15 +173,20 @@ namespace EclipseProtocol.AI
                 return;
             }
 
-            if (patrolPoints.Count == 0 || navMeshAgent.pathPending)
+            EnsurePatrolDestination();
+
+            if (navMeshAgent.pathPending)
             {
                 return;
             }
 
             if (navMeshAgent.remainingDistance <= Mathf.Max(waypointTolerance, navMeshAgent.stoppingDistance))
             {
-                _patrolIndex = (_patrolIndex + 1) % patrolPoints.Count;
-                navMeshAgent.SetDestination(patrolPoints[_patrolIndex].position);
+                AdvancePatrolDestination();
+            }
+            else
+            {
+                RecoverPatrolPathIfNeeded();
             }
         }
 
@@ -209,6 +215,12 @@ namespace EclipseProtocol.AI
 
         private void TickWindUp()
         {
+            if (target == null)
+            {
+                EnterState(HunterState.Return);
+                return;
+            }
+
             FaceTarget();
             _stateTimer -= Time.deltaTime;
             if (_stateTimer > 0f)
@@ -252,9 +264,20 @@ namespace EclipseProtocol.AI
                 return;
             }
 
+            EnsurePatrolDestination();
+
+            if (navMeshAgent.pathPending)
+            {
+                return;
+            }
+
             if (!navMeshAgent.pathPending && navMeshAgent.remainingDistance <= Mathf.Max(waypointTolerance, navMeshAgent.stoppingDistance))
             {
-                EnterState(patrolPoints.Count > 0 ? HunterState.Patrol : HunterState.Idle);
+                EnterState(HunterState.Patrol);
+            }
+            else
+            {
+                RecoverPatrolPathIfNeeded();
             }
         }
 
@@ -279,9 +302,9 @@ namespace EclipseProtocol.AI
                         navMeshAgent.isStopped = false;
                     }
                     SetStateColor(patrolColor);
-                    if (canUseAgent && patrolPoints.Count > 0)
+                    if (canUseAgent)
                     {
-                        navMeshAgent.SetDestination(ClampToMovementBounds(patrolPoints[_patrolIndex].position));
+                        SetPatrolDestination();
                     }
                     break;
                 case HunterState.Chase:
@@ -325,12 +348,117 @@ namespace EclipseProtocol.AI
                     if (canUseAgent)
                     {
                         navMeshAgent.isStopped = false;
-                        Vector3 destination = patrolPoints.Count > 0 ? patrolPoints[_patrolIndex].position : _homePosition;
-                        navMeshAgent.SetDestination(ClampToMovementBounds(destination));
+                        SetPatrolDestination();
                     }
                     SetStateColor(patrolColor);
                     break;
             }
+        }
+
+        private void AdvancePatrolDestination()
+        {
+            if (patrolPoints.Count >= 2)
+            {
+                _patrolIndex = (_patrolIndex + 1) % patrolPoints.Count;
+            }
+
+            SetPatrolDestination();
+        }
+
+        private void EnsurePatrolDestination()
+        {
+            if (navMeshAgent == null || !navMeshAgent.isOnNavMesh || navMeshAgent.pathPending)
+            {
+                return;
+            }
+
+            if (!navMeshAgent.hasPath || navMeshAgent.pathStatus == NavMeshPathStatus.PathInvalid)
+            {
+                SetPatrolDestination();
+            }
+        }
+
+        private void RecoverPatrolPathIfNeeded()
+        {
+            if (navMeshAgent == null || !navMeshAgent.isOnNavMesh || navMeshAgent.pathPending)
+            {
+                return;
+            }
+
+            float arrivalDistance = Mathf.Max(waypointTolerance, navMeshAgent.stoppingDistance) + 0.25f;
+            bool hasValidPath = navMeshAgent.hasPath && navMeshAgent.pathStatus != NavMeshPathStatus.PathInvalid;
+            bool tryingToMove = navMeshAgent.desiredVelocity.sqrMagnitude > stalledVelocityThreshold * stalledVelocityThreshold;
+            bool barelyMoving = navMeshAgent.velocity.sqrMagnitude < stalledVelocityThreshold * stalledVelocityThreshold;
+            bool stillFarFromDestination = navMeshAgent.remainingDistance > arrivalDistance;
+            if (hasValidPath && (!tryingToMove || !barelyMoving || !stillFarFromDestination))
+            {
+                _stalledRepathTimer = 0f;
+                return;
+            }
+
+            _stalledRepathTimer += Time.deltaTime;
+            if (_stalledRepathTimer < stalledRepathSeconds)
+            {
+                return;
+            }
+
+            _stalledRepathTimer = 0f;
+            if (hasValidPath)
+            {
+                AdvancePatrolDestination();
+            }
+            else
+            {
+                SetPatrolDestination();
+            }
+        }
+
+        private void SetPatrolDestination()
+        {
+            if (navMeshAgent == null || !navMeshAgent.isOnNavMesh)
+            {
+                return;
+            }
+
+            Vector3 destination = patrolPoints.Count >= 2 && patrolPoints[_patrolIndex] != null
+                ? patrolPoints[_patrolIndex].position
+                : FindRoamPoint();
+
+            _patrolDestination = ClampToMovementBounds(destination);
+            if (NavMesh.SamplePosition(_patrolDestination, out NavMeshHit hit, 3f, NavMesh.AllAreas))
+            {
+                _patrolDestination = hit.position;
+            }
+
+            navMeshAgent.SetDestination(_patrolDestination);
+        }
+
+        private Vector3 FindRoamPoint()
+        {
+            Vector3 origin = navMeshAgent != null && navMeshAgent.isOnNavMesh ? navMeshAgent.transform.position : transform.position;
+            for (int i = 0; i < 12; i++)
+            {
+                Vector3 candidate = constrainToRoom
+                    ? new Vector3(
+                        Random.Range(movementBounds.min.x + roomEdgePadding, movementBounds.max.x - roomEdgePadding),
+                        origin.y,
+                        Random.Range(movementBounds.min.z + roomEdgePadding, movementBounds.max.z - roomEdgePadding))
+                    : _homePosition + Random.insideUnitSphere * 8f;
+
+                candidate.y = origin.y;
+                candidate = ClampToMovementBounds(candidate);
+                if ((candidate - origin).sqrMagnitude < roamPointMinDistance * roamPointMinDistance)
+                {
+                    continue;
+                }
+
+                if (NavMesh.SamplePosition(candidate, out NavMeshHit hit, 3f, NavMesh.AllAreas))
+                {
+                    return hit.position;
+                }
+            }
+
+            return patrolPoints.Count == 1 && patrolPoints[0] != null ? patrolPoints[0].position : _homePosition;
         }
 
         private void SetStateColor(Color color)

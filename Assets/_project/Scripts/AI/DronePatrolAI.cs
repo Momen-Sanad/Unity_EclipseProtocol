@@ -18,10 +18,13 @@ namespace EclipseProtocol.AI
         [SerializeField, Min(0.1f)] private float stuckVelocityThreshold = 0.08f;
         [SerializeField, Min(0.25f)] private float stuckRecoverySeconds = 1.25f;
         [SerializeField, Min(0.1f)] private float stuckRepathInterval = 0.4f;
+        [SerializeField, Min(0.5f)] private float roamPointMinDistance = 2f;
 
         private int _currentWaypointIndex;
         private float _stuckTimer;
         private float _stuckRepathTimer;
+        private Vector3 _homePosition;
+        private Vector3 _currentDestination;
 
         public IReadOnlyList<Transform> Waypoints => waypoints;
         public GameBalanceData BalanceData => balanceData;
@@ -44,9 +47,9 @@ namespace EclipseProtocol.AI
             _currentWaypointIndex = 0;
             ApplyAgentSettings();
 
-            if (navMeshAgent != null && navMeshAgent.isOnNavMesh && waypoints.Count > 0)
+            if (navMeshAgent != null && navMeshAgent.isOnNavMesh)
             {
-                navMeshAgent.SetDestination(ClampToMovementBounds(waypoints[0].position));
+                SetNextDestination();
             }
         }
 
@@ -68,23 +71,32 @@ namespace EclipseProtocol.AI
             {
                 navMeshAgent = GetComponent<NavMeshAgent>();
             }
+
+            _homePosition = transform.position;
         }
 
         private void Start()
         {
             ApplyAgentSettings();
 
-            if (waypoints.Count > 0 && waypoints[0] != null)
+            if (navMeshAgent != null && navMeshAgent.isOnNavMesh)
             {
-                navMeshAgent.SetDestination(ClampToMovementBounds(waypoints[0].position));
+                SetNextDestination();
             }
         }
 
         private void Update()
         {
+            if (navMeshAgent == null || !navMeshAgent.isOnNavMesh)
+            {
+                return;
+            }
+
             EnforceMovementBounds();
 
-            if (waypoints.Count == 0 || navMeshAgent.pathPending)
+            EnsureActiveDestination();
+
+            if (navMeshAgent.pathPending)
             {
                 return;
             }
@@ -114,10 +126,18 @@ namespace EclipseProtocol.AI
 
         private void RecoverIfStuck()
         {
-            if (navMeshAgent == null || !navMeshAgent.isOnNavMesh || !navMeshAgent.hasPath)
+            if (navMeshAgent == null || !navMeshAgent.isOnNavMesh)
             {
                 _stuckTimer = 0f;
                 _stuckRepathTimer = 0f;
+                return;
+            }
+
+            if (!navMeshAgent.hasPath)
+            {
+                _stuckTimer = 0f;
+                _stuckRepathTimer = 0f;
+                EnsureActiveDestination();
                 return;
             }
 
@@ -134,10 +154,10 @@ namespace EclipseProtocol.AI
 
             _stuckTimer += Time.deltaTime;
             _stuckRepathTimer -= Time.deltaTime;
-            if (_stuckRepathTimer <= 0f && waypoints[_currentWaypointIndex] != null)
+            if (_stuckRepathTimer <= 0f)
             {
                 _stuckRepathTimer = stuckRepathInterval;
-                navMeshAgent.SetDestination(ClampToMovementBounds(waypoints[_currentWaypointIndex].position));
+                navMeshAgent.SetDestination(_currentDestination);
             }
 
             if (_stuckTimer < stuckRecoverySeconds)
@@ -153,17 +173,80 @@ namespace EclipseProtocol.AI
 
         private void AdvanceToNextWaypoint()
         {
-            if (waypoints.Count == 0)
+            if (waypoints.Count >= 2)
+            {
+                _currentWaypointIndex = (_currentWaypointIndex + 1) % waypoints.Count;
+            }
+
+            SetNextDestination();
+        }
+
+        private void SetNextDestination()
+        {
+            if (navMeshAgent == null || !navMeshAgent.isOnNavMesh)
             {
                 return;
             }
 
-            _currentWaypointIndex = (_currentWaypointIndex + 1) % waypoints.Count;
-            Transform nextWaypoint = waypoints[_currentWaypointIndex];
-            if (nextWaypoint != null)
+            if (waypoints.Count >= 2 && waypoints[_currentWaypointIndex] != null)
             {
-                navMeshAgent.SetDestination(ClampToMovementBounds(nextWaypoint.position));
+                SetDestination(waypoints[_currentWaypointIndex].position);
+                return;
             }
+
+            SetDestination(FindRoamPoint());
+        }
+
+        private void EnsureActiveDestination()
+        {
+            if (navMeshAgent == null || !navMeshAgent.isOnNavMesh || navMeshAgent.pathPending)
+            {
+                return;
+            }
+
+            if (!navMeshAgent.hasPath || navMeshAgent.pathStatus == NavMeshPathStatus.PathInvalid)
+            {
+                SetNextDestination();
+            }
+        }
+
+        private void SetDestination(Vector3 destination)
+        {
+            _currentDestination = ClampToMovementBounds(destination);
+            if (NavMesh.SamplePosition(_currentDestination, out NavMeshHit hit, 3f, NavMesh.AllAreas))
+            {
+                _currentDestination = hit.position;
+            }
+
+            navMeshAgent.SetDestination(_currentDestination);
+        }
+
+        private Vector3 FindRoamPoint()
+        {
+            Vector3 origin = navMeshAgent != null && navMeshAgent.isOnNavMesh ? navMeshAgent.transform.position : transform.position;
+            for (int i = 0; i < 12; i++)
+            {
+                Vector3 candidate = constrainToRoom
+                    ? new Vector3(
+                        Random.Range(movementBounds.min.x + roomEdgePadding, movementBounds.max.x - roomEdgePadding),
+                        origin.y,
+                        Random.Range(movementBounds.min.z + roomEdgePadding, movementBounds.max.z - roomEdgePadding))
+                    : _homePosition + Random.insideUnitSphere * 8f;
+
+                candidate.y = origin.y;
+                candidate = ClampToMovementBounds(candidate);
+                if ((candidate - origin).sqrMagnitude < roamPointMinDistance * roamPointMinDistance)
+                {
+                    continue;
+                }
+
+                if (NavMesh.SamplePosition(candidate, out NavMeshHit hit, 3f, NavMesh.AllAreas))
+                {
+                    return hit.position;
+                }
+            }
+
+            return waypoints.Count == 1 && waypoints[0] != null ? waypoints[0].position : _homePosition;
         }
 
         private void EnforceMovementBounds()
@@ -182,10 +265,7 @@ namespace EclipseProtocol.AI
             if (navMeshAgent != null && navMeshAgent.isOnNavMesh)
             {
                 navMeshAgent.Warp(clampedPosition);
-                if (waypoints.Count > 0 && waypoints[_currentWaypointIndex] != null)
-                {
-                    navMeshAgent.SetDestination(ClampToMovementBounds(waypoints[_currentWaypointIndex].position));
-                }
+                SetNextDestination();
             }
             else
             {
