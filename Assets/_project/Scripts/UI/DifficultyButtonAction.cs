@@ -1,3 +1,4 @@
+using EclipseProtocol.Audio;
 using EclipseProtocol.Core;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -30,6 +31,7 @@ namespace EclipseProtocol.UI
 
         private void SelectDifficulty()
         {
+            AudioManager.Instance?.PlayButtonPress();
             RunDifficultyData.SetDifficulty(difficulty);
 
             if (!string.IsNullOrWhiteSpace(gameplaySceneName))

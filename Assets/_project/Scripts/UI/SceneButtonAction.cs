@@ -1,3 +1,4 @@
+using EclipseProtocol.Audio;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
@@ -39,6 +40,8 @@ namespace EclipseProtocol.UI
 
         private void Execute()
         {
+            AudioManager.Instance?.PlayButtonPress();
+
             if (action == ButtonAction.QuitGame)
             {
                 QuitGame();

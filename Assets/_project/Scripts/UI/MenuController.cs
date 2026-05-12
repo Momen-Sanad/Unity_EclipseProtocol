@@ -1,3 +1,4 @@
+using EclipseProtocol.Audio;
 using EclipseProtocol.Core;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -61,6 +62,7 @@ namespace EclipseProtocol.UI
 
         public void ReturnToStartScreen()
         {
+            AudioManager.Instance?.PlayButtonPress();
             RunSeedData.SetSeed(seedInputField != null ? seedInputField.text : RunSeedData.SeedText);
             Time.timeScale = 1f;
             SceneManager.LoadScene(startScreenSceneName);

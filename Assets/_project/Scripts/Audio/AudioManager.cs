@@ -30,6 +30,7 @@ namespace EclipseProtocol.Audio
         private AudioClip _warningClip;
         private AudioClip _lungeClip;
         private AudioClip _lockedClip;
+        private AudioClip _buttonPressClip;
         private Coroutine _musicFadeRoutine;
 
         public static AudioManager Instance
@@ -124,6 +125,11 @@ namespace EclipseProtocol.Audio
         public void PlayLocked(Vector3 position)
         {
             PlayOneShot(_lockedClip, position, 0.75f);
+        }
+
+        public void PlayButtonPress()
+        {
+            PlayOneShot(_buttonPressClip, Vector3.zero, 0.7f);
         }
 
         public void PlayVictory(Vector3 position)
@@ -309,6 +315,7 @@ namespace EclipseProtocol.Audio
             _warningClip ??= CreateTone("HunterWarning", 300f, 0.18f, 0.28f, 420f);
             _lungeClip ??= CreateTone("HunterLunge", 190f, 0.2f, 0.34f, 90f);
             _lockedClip ??= CreateTone("ExtractionLocked", 160f, 0.18f, 0.3f);
+            _buttonPressClip ??= CreateTone("UIButtonPress", 720f, 0.06f, 0.18f, 920f);
         }
 
         private bool CanPersistAcrossScenes()

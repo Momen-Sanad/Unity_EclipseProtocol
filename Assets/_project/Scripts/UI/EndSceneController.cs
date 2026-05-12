@@ -1,3 +1,4 @@
+using EclipseProtocol.Audio;
 using EclipseProtocol.Core;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -33,12 +34,14 @@ namespace EclipseProtocol.UI
 
         public void LoadMenu()
         {
+            AudioManager.Instance?.PlayButtonPress();
             Time.timeScale = 1f;
             SceneManager.LoadScene(menuSceneName);
         }
 
         public void Retry()
         {
+            AudioManager.Instance?.PlayButtonPress();
             Time.timeScale = 1f;
             RunSeedData.UseRandomSeed();
             SceneManager.LoadScene(gameplaySceneName);
