@@ -80,17 +80,20 @@ namespace EclipseProtocol.UI
         private Text _repairedNodesText;
         private Text _pixelTimerText;
         private int _collectedCellCount;
+#if UNITY_EDITOR
+        private bool _isEditorHudRefreshQueued;
+#endif
 
         public GameObject PauseOverlay => pauseOverlay;
 
         private void OnValidate()
         {
-            EnsurePixelHudState();
+            RequestPixelHudStateRefresh();
         }
 
         private void Awake()
         {
-            EnsurePixelHudState();
+            RequestPixelHudStateRefresh();
             if (Application.isPlaying)
             {
                 ConfigureRuntimeHud();
@@ -139,7 +142,7 @@ namespace EclipseProtocol.UI
 
         private void OnEnable()
         {
-            EnsurePixelHudState();
+            RequestPixelHudStateRefresh();
             if (Application.isPlaying)
             {
                 SetEnergyCellSystem(EnergyCellSystem.Instance);
@@ -153,6 +156,40 @@ namespace EclipseProtocol.UI
                 SetEnergyCellSystem(null);
             }
         }
+
+        private void RequestPixelHudStateRefresh()
+        {
+            if (Application.isPlaying)
+            {
+                EnsurePixelHudState();
+                return;
+            }
+
+#if UNITY_EDITOR
+            if (_isEditorHudRefreshQueued)
+            {
+                return;
+            }
+
+            _isEditorHudRefreshQueued = true;
+            UnityEditor.EditorApplication.delayCall += RefreshPixelHudStateInEditor;
+#else
+            EnsurePixelHudState();
+#endif
+        }
+
+#if UNITY_EDITOR
+        private void RefreshPixelHudStateInEditor()
+        {
+            _isEditorHudRefreshQueued = false;
+            if (this == null || Application.isPlaying)
+            {
+                return;
+            }
+
+            EnsurePixelHudState();
+        }
+#endif
 
         private void Update()
         {
