@@ -669,12 +669,17 @@ MonoBehaviour:
   timerLowColor: {r: 1, g: 0.1, b: 0.08, a: 1}
   usePixelHud: 1
   pixelHudFont: {fileID: 12800000, guid: d7cb3c2eb4e95a5b6ba7f8643c887015, type: 3}
-  pixelHudScale: 2
+  pixelHudScale: 1.5
   pixelHudPanelColor: {r: 0.04, g: 0.1, b: 0.2, a: 0.82}
   pixelHudBorderColor: {r: 0.38, g: 0.58, b: 0.9, a: 1}
   pixelHudHealthColor: {r: 0.35, g: 1, b: 0.52, a: 1}
   pixelHudEnergyColor: {r: 1, g: 0.86, b: 0.28, a: 1}
   pixelHudEmptySegmentColor: {r: 0.1, g: 0.18, b: 0.32, a: 0.95}
+  dashIconSprite: {fileID: 21300000, guid: 9029960992650aca19fb8bf4b779d248, type: 3}
+  dashIconAnchoredPosition: {x: 24, y: 24}
+  dashIconSize: 500
+  dashReadyIconColor: {r: 1, g: 1, b: 1, a: 1}
+  dashCooldownIconColor: {r: 0.18, g: 0.18, b: 0.18, a: 1}
 --- !u!224 &1515074579
 RectTransform:
   m_ObjectHideFlags: 0

@@ -50,12 +50,19 @@ namespace EclipseProtocol.UI
         [Header("Pixel HUD")]
         [SerializeField] private bool usePixelHud = true;
         [SerializeField] private Font pixelHudFont;
-        [SerializeField, Min(0.5f)] private float pixelHudScale = 2f;
+        [SerializeField, Min(0.5f)] private float pixelHudScale = 1.5f;
         [SerializeField] private Color pixelHudPanelColor = new Color(0.04f, 0.1f, 0.2f, 0.82f);
         [SerializeField] private Color pixelHudBorderColor = new Color(0.38f, 0.58f, 0.9f, 1f);
         [SerializeField] private Color pixelHudHealthColor = new Color(0.35f, 1f, 0.52f, 1f);
         [SerializeField] private Color pixelHudEnergyColor = new Color(1f, 0.86f, 0.28f, 1f);
         [SerializeField] private Color pixelHudEmptySegmentColor = new Color(0.1f, 0.18f, 0.32f, 0.95f);
+
+        [Header("Dash HUD")]
+        [SerializeField] private Sprite dashIconSprite;
+        [SerializeField] private Vector2 dashIconAnchoredPosition = new Vector2(24f, 24f);
+        [SerializeField, Min(24f)] private float dashIconSize = 600f;
+        [SerializeField] private Color dashReadyIconColor = Color.white;
+        [SerializeField] private Color dashCooldownIconColor = new Color(0.18f, 0.18f, 0.18f, 1f);
 
         private PlayerController _player;
         private RunTimer _timer;
@@ -65,6 +72,8 @@ namespace EclipseProtocol.UI
         private Image[] _pixelHealthSegments;
         private Image[] _pixelEnergySegments;
         private Text _pixelCellCountText;
+        private Image _dashIconImage;
+        private Text _dashCooldownText;
         private int _collectedCellCount;
 
         public GameObject PauseOverlay => pauseOverlay;
@@ -274,6 +283,8 @@ namespace EclipseProtocol.UI
                 dashCooldownFill.color = Color.Lerp(dashEmptyColor, dashReadyColor, dashReady01);
             }
 
+            UpdateDashHud(_player.DashCooldownRemaining);
+
             if (!usePackagedHealthHud && healthText != null)
             {
                 healthText.text = $"HP {Mathf.CeilToInt(_player.CurrentHealth)}/{Mathf.CeilToInt(_player.MaxHealth)}";
@@ -380,6 +391,7 @@ namespace EclipseProtocol.UI
                 }
 
                 CollectPixelHudReferences(existingRoot);
+                BuildDashHud(hudFont);
                 return;
             }
 
@@ -420,6 +432,8 @@ namespace EclipseProtocol.UI
             cellsCountRect.anchoredPosition = new Vector2(-12f, 0f);
             cellsCountRect.sizeDelta = new Vector2(44f, 0f);
             _pixelCellCountText.alignment = TextAnchor.MiddleRight;
+
+            BuildDashHud(hudFont);
         }
 
         private void ConfigurePixelRoot(RectTransform root)
@@ -497,10 +511,103 @@ namespace EclipseProtocol.UI
             outline.effectDistance = new Vector2(distance, -distance);
         }
 
+        private void BuildDashHud(Font hudFont)
+        {
+            const string dashRootName = "DashCooldownIcon";
+
+            Transform existingRoot = transform.Find(dashRootName);
+            if (existingRoot != null)
+            {
+                existingRoot.gameObject.SetActive(true);
+                if (existingRoot is RectTransform existingRect)
+                {
+                    ConfigureDashRoot(existingRect);
+                }
+
+                CollectDashHudReferences(existingRoot);
+                ConfigureDashHudVisuals();
+                return;
+            }
+
+            RectTransform root = CreateRect(dashRootName, transform);
+            ConfigureDashRoot(root);
+
+            _dashIconImage = root.gameObject.AddComponent<Image>();
+            _dashIconImage.raycastTarget = false;
+            _dashIconImage.preserveAspect = true;
+
+            _dashCooldownText = CreatePixelText("DashCooldownText", root, hudFont, string.Empty, 26, Color.white);
+            RectTransform textRect = _dashCooldownText.rectTransform;
+            textRect.anchorMin = Vector2.zero;
+            textRect.anchorMax = Vector2.one;
+            textRect.offsetMin = Vector2.zero;
+            textRect.offsetMax = Vector2.zero;
+            _dashCooldownText.alignment = TextAnchor.MiddleCenter;
+            AddOutline(textRect, Color.black, 2f);
+
+            ConfigureDashHudVisuals();
+        }
+
+        private void ConfigureDashRoot(RectTransform root)
+        {
+            root.anchorMin = Vector2.zero;
+            root.anchorMax = Vector2.zero;
+            root.pivot = Vector2.zero;
+            root.anchoredPosition = dashIconAnchoredPosition;
+            root.sizeDelta = new Vector2(dashIconSize, dashIconSize);
+            root.localScale = Vector3.one;
+        }
+
+        private void ConfigureDashHudVisuals()
+        {
+            if (_dashIconImage != null)
+            {
+                _dashIconImage.sprite = dashIconSprite;
+                _dashIconImage.color = dashReadyIconColor;
+            }
+
+            if (_dashCooldownText != null)
+            {
+                _dashCooldownText.gameObject.SetActive(false);
+                _dashCooldownText.text = string.Empty;
+            }
+        }
+
+        private void CollectDashHudReferences(Transform root)
+        {
+            _dashIconImage = root.GetComponent<Image>();
+            Transform cooldownText = root.Find("DashCooldownText");
+            _dashCooldownText = cooldownText != null ? cooldownText.GetComponent<Text>() : null;
+        }
+
         private void UpdatePixelHud(float health01, float energy01)
         {
             SetPixelSegments(_pixelHealthSegments, health01, pixelHudHealthColor);
             SetPixelSegments(_pixelEnergySegments, energy01, pixelHudEnergyColor);
+        }
+
+        private void UpdateDashHud(float cooldownRemaining)
+        {
+            if (_dashIconImage == null && transform != null)
+            {
+                Transform dashRoot = transform.Find("DashCooldownIcon");
+                if (dashRoot != null)
+                {
+                    CollectDashHudReferences(dashRoot);
+                }
+            }
+
+            bool isCoolingDown = cooldownRemaining > 0.05f;
+            if (_dashIconImage != null)
+            {
+                _dashIconImage.color = isCoolingDown ? dashCooldownIconColor : dashReadyIconColor;
+            }
+
+            if (_dashCooldownText != null)
+            {
+                _dashCooldownText.gameObject.SetActive(isCoolingDown);
+                _dashCooldownText.text = isCoolingDown ? Mathf.CeilToInt(cooldownRemaining).ToString() : string.Empty;
+            }
         }
 
         private void CollectPixelHudReferences(Transform root)
@@ -602,6 +709,12 @@ namespace EclipseProtocol.UI
             if (pixelHud != null)
             {
                 pixelHud.gameObject.SetActive(isVisible);
+            }
+
+            Transform dashHud = transform != null ? transform.Find("DashCooldownIcon") : null;
+            if (dashHud != null)
+            {
+                dashHud.gameObject.SetActive(isVisible);
             }
         }
 
