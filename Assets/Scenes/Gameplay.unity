@@ -676,7 +676,6 @@ MonoBehaviour:
   pixelHudEnergyColor: {r: 1, g: 0.86, b: 0.28, a: 1}
   pixelHudEmptySegmentColor: {r: 0.1, g: 0.18, b: 0.32, a: 0.95}
   dashIconSprite: {fileID: 21300000, guid: 9029960992650aca19fb8bf4b779d248, type: 3}
-  dashIconAnchoredPosition: {x: 24, y: 24}
   dashIconSize: 500
   dashReadyIconColor: {r: 1, g: 1, b: 1, a: 1}
   dashCooldownIconColor: {r: 0.18, g: 0.18, b: 0.18, a: 1}

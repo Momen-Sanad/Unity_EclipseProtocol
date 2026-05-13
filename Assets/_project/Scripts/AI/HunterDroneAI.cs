@@ -39,6 +39,8 @@ namespace EclipseProtocol.AI
         [SerializeField, Min(0.5f)] private float roamPointMinDistance = 2f;
         [SerializeField, Min(0.1f)] private float stalledVelocityThreshold = 0.08f;
         [SerializeField, Min(0.1f)] private float stalledRepathSeconds = 0.5f;
+        [SerializeField, Min(0.01f)] private float lungeObstaclePadding = 0.08f;
+        [SerializeField] private LayerMask lungeObstacleMask = ~0;
 
         private EnemyContactDamage _contactDamage;
         private HunterState _state = HunterState.Idle;
@@ -237,7 +239,11 @@ namespace EclipseProtocol.AI
         private void TickLunge()
         {
             _stateTimer -= Time.deltaTime;
-            navMeshAgent.Move(_lungeDirection * LungeSpeed * Time.deltaTime);
+            if (!TryMoveLunge(LungeSpeed * Time.deltaTime))
+            {
+                EnterState(HunterState.Recover);
+                return;
+            }
 
             if (_stateTimer <= 0f)
             {
@@ -499,6 +505,54 @@ namespace EclipseProtocol.AI
             }
 
             transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(toTarget), 16f * Time.deltaTime);
+        }
+
+        private bool TryMoveLunge(float distance)
+        {
+            if (distance <= 0f)
+            {
+                return true;
+            }
+
+            float radius = navMeshAgent != null ? Mathf.Max(0.05f, navMeshAgent.radius * 0.9f) : 0.45f;
+            float centerHeight = navMeshAgent != null ? Mathf.Max(radius + 0.1f, navMeshAgent.baseOffset) : radius + 0.1f;
+            Vector3 origin = transform.position + Vector3.up * centerHeight;
+            float castDistance = distance + lungeObstaclePadding;
+
+            if (Physics.SphereCast(origin, radius, _lungeDirection, out RaycastHit hit, castDistance, lungeObstacleMask, QueryTriggerInteraction.Ignore)
+                && IsBlockingLungeHit(hit.collider))
+            {
+                float allowedDistance = Mathf.Max(0f, hit.distance - lungeObstaclePadding);
+                if (allowedDistance > 0f)
+                {
+                    navMeshAgent.Move(_lungeDirection * allowedDistance);
+                }
+
+                return false;
+            }
+
+            navMeshAgent.Move(_lungeDirection * distance);
+            return true;
+        }
+
+        private bool IsBlockingLungeHit(Collider hitCollider)
+        {
+            if (hitCollider == null)
+            {
+                return false;
+            }
+
+            if (hitCollider.transform == transform || hitCollider.transform.IsChildOf(transform))
+            {
+                return false;
+            }
+
+            if (target != null && hitCollider.transform.IsChildOf(target))
+            {
+                return false;
+            }
+
+            return true;
         }
 
         private void ApplyAgentSettings()

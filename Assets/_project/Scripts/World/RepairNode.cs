@@ -4,6 +4,7 @@ using EclipseProtocol.Player;
 using EclipseProtocol.UI;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.AI;
 
 namespace EclipseProtocol.World
 {
@@ -26,6 +27,8 @@ namespace EclipseProtocol.World
         [SerializeField, Min(0.1f)] private float repairIndicatorYOffset = 3f;
         [SerializeField] private Color repairIndicatorIdleColor = new Color(0.05f, 0.22f, 1f);
         [SerializeField] private Color repairIndicatorActiveColor = new Color(0.1f, 1f, 0.35f);
+        [SerializeField] private bool blockEnemyNavigation = true;
+        [SerializeField] private Vector3 navigationBlockerSize = new Vector3(1.6f, 2f, 1.6f);
 
         private PlayerController _playerInside;
         private HUDController _hudController;
@@ -50,6 +53,8 @@ namespace EclipseProtocol.World
             {
                 statusRenderer = GetComponentInChildren<Renderer>();
             }
+
+            ConfigureNavigationBlocker();
         }
 
         private void Start()
@@ -278,6 +283,28 @@ namespace EclipseProtocol.World
             _repairIndicatorPropertyBlock.SetColor("_BaseColor", color);
             _repairIndicatorPropertyBlock.SetColor("_Color", color);
             _repairIndicatorRenderer.SetPropertyBlock(_repairIndicatorPropertyBlock);
+        }
+
+        private void ConfigureNavigationBlocker()
+        {
+            if (!blockEnemyNavigation)
+            {
+                return;
+            }
+
+            NavMeshObstacle obstacle = GetComponent<NavMeshObstacle>();
+            if (obstacle == null)
+            {
+                obstacle = gameObject.AddComponent<NavMeshObstacle>();
+            }
+
+            obstacle.shape = NavMeshObstacleShape.Box;
+            obstacle.size = navigationBlockerSize;
+            obstacle.center = Vector3.zero;
+            obstacle.carving = true;
+            obstacle.carveOnlyStationary = true;
+            obstacle.carvingMoveThreshold = 0.05f;
+            obstacle.carvingTimeToStationary = 0.1f;
         }
 
         private void StartRepairLoop()
