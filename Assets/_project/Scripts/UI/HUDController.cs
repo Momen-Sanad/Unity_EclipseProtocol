@@ -6,8 +6,12 @@ using UnityEngine.UI;
 
 namespace EclipseProtocol.UI
 {
+    [ExecuteAlways]
     public class HUDController : MonoBehaviour
     {
+        private const int PixelHudSegmentCount = 10;
+        private const string PixelHudRootName = "PixelStatusHud";
+
         [Header("Bars")]
         [SerializeField] private Image healthFill;
         [SerializeField] private Image energyFill;
@@ -43,15 +47,56 @@ namespace EclipseProtocol.UI
         [SerializeField] private Color timerMidColor = new Color(1f, 0.78f, 0.12f);
         [SerializeField] private Color timerLowColor = new Color(1f, 0.1f, 0.08f);
 
+        [Header("Pixel HUD")]
+        [SerializeField] private bool usePixelHud = true;
+        [SerializeField] private Font pixelHudFont;
+        [SerializeField, Min(0.5f)] private float pixelHudScale = 2f;
+        [SerializeField] private Color pixelHudPanelColor = new Color(0.04f, 0.1f, 0.2f, 0.82f);
+        [SerializeField] private Color pixelHudBorderColor = new Color(0.38f, 0.58f, 0.9f, 1f);
+        [SerializeField] private Color pixelHudHealthColor = new Color(0.35f, 1f, 0.52f, 1f);
+        [SerializeField] private Color pixelHudEnergyColor = new Color(1f, 0.86f, 0.28f, 1f);
+        [SerializeField] private Color pixelHudEmptySegmentColor = new Color(0.1f, 0.18f, 0.32f, 0.95f);
+
         private PlayerController _player;
         private RunTimer _timer;
         private RunScore _score;
         private EnergyCellSystem _energyCellSystem;
         private float _messageTimer;
+        private Image[] _pixelHealthSegments;
+        private Image[] _pixelEnergySegments;
+        private Text _pixelCellCountText;
+        private int _collectedCellCount;
 
         public GameObject PauseOverlay => pauseOverlay;
 
+        private void OnValidate()
+        {
+            EnsurePixelHudState();
+        }
+
         private void Awake()
+        {
+            EnsurePixelHudState();
+            if (Application.isPlaying)
+            {
+                ConfigureRuntimeHud();
+            }
+        }
+
+        private void EnsurePixelHudState()
+        {
+            if (usePixelHud)
+            {
+                BuildPixelHud();
+                SetClassicResourceHudVisible(false);
+                return;
+            }
+
+            SetPixelHudVisible(false);
+            SetClassicResourceHudVisible(true);
+        }
+
+        private void ConfigureRuntimeHud()
         {
             if (usePackagedHealthHud)
             {
@@ -80,16 +125,28 @@ namespace EclipseProtocol.UI
 
         private void OnEnable()
         {
-            SetEnergyCellSystem(EnergyCellSystem.Instance);
+            EnsurePixelHudState();
+            if (Application.isPlaying)
+            {
+                SetEnergyCellSystem(EnergyCellSystem.Instance);
+            }
         }
 
         private void OnDisable()
         {
-            SetEnergyCellSystem(null);
+            if (Application.isPlaying)
+            {
+                SetEnergyCellSystem(null);
+            }
         }
 
         private void Update()
         {
+            if (!Application.isPlaying)
+            {
+                return;
+            }
+
             UpdatePlayerStats();
             UpdateTimer();
             UpdateScore();
@@ -222,17 +279,19 @@ namespace EclipseProtocol.UI
                 healthText.text = $"HP {Mathf.CeilToInt(_player.CurrentHealth)}/{Mathf.CeilToInt(_player.MaxHealth)}";
             }
 
-            if (energyText != null)
+            if (!usePixelHud && energyText != null)
             {
                 energyText.text = $"Energy {Mathf.CeilToInt(_player.CurrentEnergy)}/{Mathf.CeilToInt(_player.MaxEnergy)}";
             }
 
-            if (dashText != null)
+            if (!usePixelHud && dashText != null)
             {
                 dashText.text = _player.DashCooldownRemaining > 0f
                     ? $"Shift Dash {Mathf.CeilToInt(_player.DashCooldownRemaining)}s"
                     : "Shift Dash Ready";
             }
+
+            UpdatePixelHud(health01, energy01);
         }
 
         private void UpdateTimer()
@@ -288,7 +347,197 @@ namespace EclipseProtocol.UI
 
         private void HandleEnergyRestored(EnergyCellPickup pickup, PlayerController player, float restoredEnergy)
         {
+            _collectedCellCount++;
+            if (_pixelCellCountText != null)
+            {
+                _pixelCellCountText.text = _collectedCellCount.ToString("00");
+            }
+
             ShowEnergyGain(restoredEnergy);
+        }
+
+        private void BuildPixelHud()
+        {
+            if (transform == null)
+            {
+                return;
+            }
+
+            Font hudFont = pixelHudFont != null ? pixelHudFont : Resources.GetBuiltinResource<Font>("Arial.ttf");
+            if (hudFont == null)
+            {
+                Debug.LogError("[HUDController] Pixel HUD needs a font assigned.", this);
+                return;
+            }
+
+            Transform existingRoot = transform.Find(PixelHudRootName);
+            if (existingRoot != null)
+            {
+                existingRoot.gameObject.SetActive(true);
+                if (existingRoot is RectTransform existingRect)
+                {
+                    ConfigurePixelRoot(existingRect);
+                }
+
+                CollectPixelHudReferences(existingRoot);
+                return;
+            }
+
+            RectTransform root = CreateRect(PixelHudRootName, transform);
+            ConfigurePixelRoot(root);
+
+            Image panel = root.gameObject.AddComponent<Image>();
+            panel.color = pixelHudPanelColor;
+
+            AddOutline(root, pixelHudBorderColor, 2f);
+
+            _pixelHealthSegments = CreatePixelBar(root, "Health", new Vector2(12f, -14f), "HEALTH", pixelHudHealthColor, hudFont);
+            _pixelEnergySegments = CreatePixelBar(root, "Energy", new Vector2(12f, -54f), "ENERGY", pixelHudEnergyColor, hudFont);
+
+            RectTransform cellsFrame = CreateRect("CellsFrame", root);
+            cellsFrame.anchorMin = new Vector2(0f, 1f);
+            cellsFrame.anchorMax = new Vector2(0f, 1f);
+            cellsFrame.pivot = new Vector2(0f, 1f);
+            cellsFrame.anchoredPosition = new Vector2(12f, -96f);
+            cellsFrame.sizeDelta = new Vector2(150f, 32f);
+            Image cellsFrameImage = cellsFrame.gameObject.AddComponent<Image>();
+            cellsFrameImage.color = new Color(0.04f, 0.12f, 0.24f, 0.92f);
+            AddOutline(cellsFrame, pixelHudBorderColor, 1.5f);
+
+            Text cellsLabel = CreatePixelText("CellsLabel", cellsFrame, hudFont, "CELLS", 14, Color.white);
+            RectTransform cellsLabelRect = cellsLabel.rectTransform;
+            cellsLabelRect.anchorMin = new Vector2(0f, 0f);
+            cellsLabelRect.anchorMax = new Vector2(0f, 1f);
+            cellsLabelRect.pivot = new Vector2(0f, 0.5f);
+            cellsLabelRect.anchoredPosition = new Vector2(12f, 0f);
+            cellsLabelRect.sizeDelta = new Vector2(82f, 0f);
+
+            _pixelCellCountText = CreatePixelText("CellsCount", cellsFrame, hudFont, "00", 14, Color.white);
+            RectTransform cellsCountRect = _pixelCellCountText.rectTransform;
+            cellsCountRect.anchorMin = new Vector2(1f, 0f);
+            cellsCountRect.anchorMax = new Vector2(1f, 1f);
+            cellsCountRect.pivot = new Vector2(1f, 0.5f);
+            cellsCountRect.anchoredPosition = new Vector2(-12f, 0f);
+            cellsCountRect.sizeDelta = new Vector2(44f, 0f);
+            _pixelCellCountText.alignment = TextAnchor.MiddleRight;
+        }
+
+        private void ConfigurePixelRoot(RectTransform root)
+        {
+            root.anchorMin = new Vector2(0f, 1f);
+            root.anchorMax = new Vector2(0f, 1f);
+            root.pivot = new Vector2(0f, 1f);
+            root.anchoredPosition = new Vector2(8f, -8f);
+            root.sizeDelta = new Vector2(390f, 138f);
+            root.localScale = new Vector3(pixelHudScale, pixelHudScale, 1f);
+        }
+
+        private Image[] CreatePixelBar(RectTransform parent, string name, Vector2 position, string label, Color fillColor, Font font)
+        {
+            RectTransform frame = CreateRect(name + "Frame", parent);
+            frame.anchorMin = new Vector2(0f, 1f);
+            frame.anchorMax = new Vector2(0f, 1f);
+            frame.pivot = new Vector2(0f, 1f);
+            frame.anchoredPosition = position;
+            frame.sizeDelta = new Vector2(360f, 32f);
+            Image frameImage = frame.gameObject.AddComponent<Image>();
+            frameImage.color = new Color(0.05f, 0.13f, 0.24f, 0.95f);
+            AddOutline(frame, pixelHudBorderColor, 1.5f);
+
+            Text labelText = CreatePixelText(name + "Label", frame, font, label, 14, fillColor);
+            RectTransform labelRect = labelText.rectTransform;
+            labelRect.anchorMin = new Vector2(0f, 0f);
+            labelRect.anchorMax = new Vector2(0f, 1f);
+            labelRect.pivot = new Vector2(0f, 0.5f);
+            labelRect.anchoredPosition = new Vector2(12f, 0f);
+            labelRect.sizeDelta = new Vector2(104f, 0f);
+
+            Image[] segments = new Image[PixelHudSegmentCount];
+            for (int i = 0; i < segments.Length; i++)
+            {
+                RectTransform segment = CreateRect(name + "Segment_" + (i + 1).ToString("00"), frame);
+                segment.anchorMin = new Vector2(0f, 0.5f);
+                segment.anchorMax = new Vector2(0f, 0.5f);
+                segment.pivot = new Vector2(0f, 0.5f);
+                segment.anchoredPosition = new Vector2(120f + i * 23f, 0f);
+                segment.sizeDelta = new Vector2(17f, 18f);
+                Image segmentImage = segment.gameObject.AddComponent<Image>();
+                segmentImage.color = fillColor;
+                segments[i] = segmentImage;
+            }
+
+            return segments;
+        }
+
+        private static RectTransform CreateRect(string name, Transform parent)
+        {
+            GameObject rectObject = new GameObject(name, typeof(RectTransform));
+            rectObject.transform.SetParent(parent, false);
+            return rectObject.GetComponent<RectTransform>();
+        }
+
+        private static Text CreatePixelText(string name, Transform parent, Font font, string value, int size, Color color)
+        {
+            RectTransform textRect = CreateRect(name, parent);
+            Text text = textRect.gameObject.AddComponent<Text>();
+            text.font = font;
+            text.text = value;
+            text.fontSize = size;
+            text.color = color;
+            text.alignment = TextAnchor.MiddleLeft;
+            text.horizontalOverflow = HorizontalWrapMode.Overflow;
+            text.verticalOverflow = VerticalWrapMode.Overflow;
+            return text;
+        }
+
+        private static void AddOutline(RectTransform target, Color color, float distance)
+        {
+            Outline outline = target.gameObject.AddComponent<Outline>();
+            outline.effectColor = color;
+            outline.effectDistance = new Vector2(distance, -distance);
+        }
+
+        private void UpdatePixelHud(float health01, float energy01)
+        {
+            SetPixelSegments(_pixelHealthSegments, health01, pixelHudHealthColor);
+            SetPixelSegments(_pixelEnergySegments, energy01, pixelHudEnergyColor);
+        }
+
+        private void CollectPixelHudReferences(Transform root)
+        {
+            _pixelHealthSegments = CollectSegments(root, "HealthFrame", "HealthSegment_");
+            _pixelEnergySegments = CollectSegments(root, "EnergyFrame", "EnergySegment_");
+            Transform cellsCount = root.Find("CellsFrame/CellsCount");
+            _pixelCellCountText = cellsCount != null ? cellsCount.GetComponent<Text>() : null;
+        }
+
+        private static Image[] CollectSegments(Transform root, string frameName, string segmentPrefix)
+        {
+            Image[] segments = new Image[PixelHudSegmentCount];
+            for (int i = 0; i < segments.Length; i++)
+            {
+                Transform segment = root.Find(frameName + "/" + segmentPrefix + (i + 1).ToString("00"));
+                segments[i] = segment != null ? segment.GetComponent<Image>() : null;
+            }
+
+            return segments;
+        }
+
+        private void SetPixelSegments(Image[] segments, float value01, Color activeColor)
+        {
+            if (segments == null)
+            {
+                return;
+            }
+
+            int activeCount = Mathf.CeilToInt(Mathf.Clamp01(value01) * segments.Length);
+            for (int i = 0; i < segments.Length; i++)
+            {
+                if (segments[i] != null)
+                {
+                    segments[i].color = i < activeCount ? activeColor : pixelHudEmptySegmentColor;
+                }
+            }
         }
 
         private void EnsureScoreText()
@@ -312,20 +561,59 @@ namespace EclipseProtocol.UI
             }
         }
 
+        private void SetClassicResourceHudVisible(bool isVisible)
+        {
+            SetImageRootVisible(healthFill, isVisible);
+            SetImageRootVisible(energyFill, isVisible);
+            SetImageRootVisible(dashCooldownFill, isVisible);
+
+            if (healthText != null)
+            {
+                healthText.gameObject.SetActive(isVisible);
+            }
+
+            if (energyText != null)
+            {
+                energyText.gameObject.SetActive(isVisible);
+            }
+
+            if (dashText != null)
+            {
+                dashText.gameObject.SetActive(isVisible);
+            }
+        }
+
         private void SetLegacyHealthHudVisible(bool isVisible)
         {
             if (healthFill != null)
             {
-                Transform healthFillRoot = healthFill.transform.parent != null
-                    ? healthFill.transform.parent
-                    : healthFill.transform;
-                healthFillRoot.gameObject.SetActive(isVisible);
+                SetImageRootVisible(healthFill, isVisible);
             }
 
             if (healthText != null)
             {
                 healthText.gameObject.SetActive(isVisible);
             }
+        }
+
+        private void SetPixelHudVisible(bool isVisible)
+        {
+            Transform pixelHud = transform != null ? transform.Find(PixelHudRootName) : null;
+            if (pixelHud != null)
+            {
+                pixelHud.gameObject.SetActive(isVisible);
+            }
+        }
+
+        private static void SetImageRootVisible(Image image, bool isVisible)
+        {
+            if (image == null)
+            {
+                return;
+            }
+
+            Transform root = image.transform.parent != null ? image.transform.parent : image.transform;
+            root.gameObject.SetActive(isVisible);
         }
 
         private static void ConfigureFillImage(Image image, Color color)
