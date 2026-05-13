@@ -325,11 +325,6 @@ namespace EclipseProtocol.World
 
         private void CreateWallSide(GeneratedRoom room, Vector2Int side)
         {
-            if (side == room.EntryDirection)
-            {
-                return;
-            }
-
             bool hasDoor = room.HasDoorOn(side);
             if (!hasDoor)
             {
