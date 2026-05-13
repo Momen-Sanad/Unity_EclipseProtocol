@@ -18,10 +18,21 @@ namespace EclipseProtocol.World
         [SerializeField, Min(0.5f)] private float playerDetectionRadius = 2.25f;
         [SerializeField] private Color repairingColor = new Color(1f, 0.7f, 0.15f);
         [SerializeField] private Color repairedColor = new Color(0.2f, 1f, 0.75f);
+        [SerializeField] private AudioClip repairLoopClip;
+        [SerializeField, Range(0f, 1f)] private float repairLoopVolume = 0.75f;
+        [SerializeField, Min(0.1f)] private float repairIndicatorLength = 1f;
+        [SerializeField, Min(0.02f)] private float repairIndicatorWidth = 0.1f;
+        [SerializeField, Min(0.01f)] private float repairIndicatorHeight = 0.04f;
+        [SerializeField, Min(0.1f)] private float repairIndicatorYOffset = 3f;
+        [SerializeField] private Color repairIndicatorIdleColor = new Color(0.05f, 0.22f, 1f);
+        [SerializeField] private Color repairIndicatorActiveColor = new Color(0.1f, 1f, 0.35f);
 
         private PlayerController _playerInside;
         private HUDController _hudController;
         private MaterialPropertyBlock _statusPropertyBlock;
+        private MaterialPropertyBlock _repairIndicatorPropertyBlock;
+        private Renderer _repairIndicatorRenderer;
+        private AudioSource _repairLoopSource;
         private float _progressSeconds;
         private bool _promptShown;
         private static RepairNode _activeRepairNode;
@@ -44,11 +55,14 @@ namespace EclipseProtocol.World
         private void Start()
         {
             _hudController = FindAnyObjectByType<HUDController>();
+            CreateRepairIndicator();
             SetStatusColor(repairingColor);
+            SetRepairIndicatorActive(false);
         }
 
         private void OnDestroy()
         {
+            StopRepairLoop();
             ReleaseRepairClaim();
         }
 
@@ -65,6 +79,8 @@ namespace EclipseProtocol.World
                 }
 
                 ReleaseRepairClaim();
+                StopRepairLoop();
+                SetRepairIndicatorActive(IsRepaired);
                 return;
             }
 
@@ -74,9 +90,11 @@ namespace EclipseProtocol.World
             {
                 if (!TryClaimRepair())
                 {
+                    StopRepairLoop();
                     return;
                 }
 
+                StartRepairLoop();
                 _progressSeconds += Time.deltaTime;
                 _hudController?.SetRepairProgress(Progress01, true);
 
@@ -88,12 +106,16 @@ namespace EclipseProtocol.World
             else if (_progressSeconds > 0f)
             {
                 ReleaseRepairClaim();
+                StopRepairLoop();
+                SetRepairIndicatorActive(false);
                 _progressSeconds = Mathf.Max(0f, _progressSeconds - Time.deltaTime);
                 _hudController?.SetRepairProgress(Progress01, true);
             }
             else
             {
                 ReleaseRepairClaim();
+                StopRepairLoop();
+                SetRepairIndicatorActive(false);
             }
         }
 
@@ -129,6 +151,8 @@ namespace EclipseProtocol.World
             _playerInside = null;
             _promptShown = false;
             ReleaseRepairClaim();
+            StopRepairLoop();
+            SetRepairIndicatorActive(IsRepaired);
             _hudController?.SetRepairProgress(0f, false);
         }
 
@@ -145,6 +169,8 @@ namespace EclipseProtocol.World
                 _playerInside = null;
                 _promptShown = false;
                 ReleaseRepairClaim();
+                StopRepairLoop();
+                SetRepairIndicatorActive(IsRepaired);
                 _hudController?.SetRepairProgress(0f, false);
                 return;
             }
@@ -187,7 +213,9 @@ namespace EclipseProtocol.World
             IsRepaired = true;
             _progressSeconds = RepairSeconds;
             ReleaseRepairClaim();
+            StopRepairLoop();
             SetStatusColor(repairedColor);
+            SetRepairIndicatorActive(true);
             _hudController?.SetRepairProgress(1f, false);
             if (linkedDoor != null && linkedDoor.NotifyRepairNodeCompleted())
             {
@@ -211,6 +239,77 @@ namespace EclipseProtocol.World
             if (statusLight != null)
             {
                 statusLight.color = color;
+            }
+        }
+
+        private void CreateRepairIndicator()
+        {
+            if (_repairIndicatorRenderer != null)
+            {
+                return;
+            }
+
+            GameObject indicator = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            indicator.name = "RepairIndicatorLine";
+            indicator.transform.SetParent(transform, false);
+            indicator.transform.localPosition = Vector3.up * repairIndicatorYOffset;
+            indicator.transform.localRotation = Quaternion.identity;
+            indicator.transform.localScale = new Vector3(repairIndicatorLength, repairIndicatorHeight, repairIndicatorWidth);
+
+            Collider indicatorCollider = indicator.GetComponent<Collider>();
+            if (indicatorCollider != null)
+            {
+                indicatorCollider.enabled = false;
+            }
+
+            _repairIndicatorRenderer = indicator.GetComponent<Renderer>();
+        }
+
+        private void SetRepairIndicatorActive(bool isActive)
+        {
+            if (_repairIndicatorRenderer == null)
+            {
+                return;
+            }
+
+            _repairIndicatorPropertyBlock ??= new MaterialPropertyBlock();
+            _repairIndicatorRenderer.GetPropertyBlock(_repairIndicatorPropertyBlock);
+            Color color = isActive ? repairIndicatorActiveColor : repairIndicatorIdleColor;
+            _repairIndicatorPropertyBlock.SetColor("_BaseColor", color);
+            _repairIndicatorPropertyBlock.SetColor("_Color", color);
+            _repairIndicatorRenderer.SetPropertyBlock(_repairIndicatorPropertyBlock);
+        }
+
+        private void StartRepairLoop()
+        {
+            if (repairLoopClip == null)
+            {
+                return;
+            }
+
+            if (_repairLoopSource == null)
+            {
+                _repairLoopSource = gameObject.AddComponent<AudioSource>();
+                _repairLoopSource.playOnAwake = false;
+                _repairLoopSource.loop = true;
+                _repairLoopSource.spatialBlend = 0.65f;
+                _repairLoopSource.rolloffMode = AudioRolloffMode.Linear;
+                _repairLoopSource.maxDistance = 18f;
+            }
+
+            _repairLoopSource.clip = repairLoopClip;
+            _repairLoopSource.volume = repairLoopVolume;
+            if (!_repairLoopSource.isPlaying)
+            {
+                _repairLoopSource.Play();
+            }
+        }
+
+        private void StopRepairLoop()
+        {
+            if (_repairLoopSource != null && _repairLoopSource.isPlaying)
+            {
+                _repairLoopSource.Stop();
             }
         }
 

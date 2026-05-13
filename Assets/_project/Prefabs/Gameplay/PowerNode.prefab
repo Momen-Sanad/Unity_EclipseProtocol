@@ -146,6 +146,8 @@ MonoBehaviour:
   playerDetectionRadius: 2.25
   repairingColor: {r: 1, g: 0.7, b: 0.15, a: 1}
   repairedColor: {r: 0.2, g: 1, b: 0.75, a: 1}
+  repairLoopClip: {fileID: 8300000, guid: 6f7cf73284c13863685baea4be98b9fd, type: 3}
+  repairLoopVolume: 0.75
 --- !u!64 &8406832526961215936
 MeshCollider:
   m_ObjectHideFlags: 0
