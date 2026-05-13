@@ -88,6 +88,7 @@ namespace EclipseProtocol.Core
             else
             {
                 hudController?.SetObjective("Repair the power node");
+                hudController?.SetRepairedNodes(0, 0);
             }
         }
 
@@ -119,6 +120,7 @@ namespace EclipseProtocol.Core
             runScore?.ResetScore();
             runScore?.StartScoring();
             hudController?.SetObjective("Repair node 1");
+            hudController?.SetRepairedNodes(0, 0);
         }
 
         public void RegisterRepairNode(RepairNode repairNode)
@@ -183,6 +185,7 @@ namespace EclipseProtocol.Core
             }
 
             IsPowerRepaired = true;
+            hudController?.SetRepairedNodes(_repairedNodes.Count, _repairNodes.Count);
             hudController?.SetObjective("Reach extraction");
             hudController?.ShowMessage("All nodes repaired. Extraction unlocked.", 2.5f);
 
@@ -198,6 +201,7 @@ namespace EclipseProtocol.Core
             int total = Mathf.Max(1, _repairNodes.Count);
             int nextNode = Mathf.Clamp(_repairedNodes.Count + 1, 1, total);
             hudController?.SetObjective($"Repair node {nextNode}/{total}");
+            hudController?.SetRepairedNodes(_repairedNodes.Count, _repairNodes.Count);
         }
 
         public void TryCompleteExtraction()

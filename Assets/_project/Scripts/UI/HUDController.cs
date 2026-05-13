@@ -11,6 +11,9 @@ namespace EclipseProtocol.UI
     {
         private const int PixelHudSegmentCount = 10;
         private const string PixelHudRootName = "PixelStatusHud";
+        private const string RepairedNodesTextName = "RepairedNodesText";
+        private const string PixelTimerTextName = "PixelTimerText";
+        private const string PixelPauseOverlayName = "PixelPauseOverlay";
 
         [Header("Bars")]
         [SerializeField] private Image healthFill;
@@ -74,6 +77,8 @@ namespace EclipseProtocol.UI
         private Text _pixelCellCountText;
         private Image _dashIconImage;
         private Text _dashCooldownText;
+        private Text _repairedNodesText;
+        private Text _pixelTimerText;
         private int _collectedCellCount;
 
         public GameObject PauseOverlay => pauseOverlay;
@@ -207,6 +212,20 @@ namespace EclipseProtocol.UI
             }
         }
 
+        public void SetRepairedNodes(int repairedCount, int totalCount)
+        {
+            if (_repairedNodesText == null && transform != null)
+            {
+                Transform repairedText = transform.Find(RepairedNodesTextName);
+                _repairedNodesText = repairedText != null ? repairedText.GetComponent<Text>() : null;
+            }
+
+            if (_repairedNodesText != null)
+            {
+                _repairedNodesText.text = $"Repaired nodes: {Mathf.Max(0, repairedCount)}/{Mathf.Max(0, totalCount)}";
+            }
+        }
+
         public void ShowMessage(string text, float duration)
         {
             if (messageText == null)
@@ -326,6 +345,14 @@ namespace EclipseProtocol.UI
                 int remainder = seconds % 60;
                 timerText.text = $"{minutes:00}:{remainder:00}";
             }
+
+            if (_pixelTimerText != null)
+            {
+                int seconds = Mathf.CeilToInt(_timer.RemainingSeconds);
+                int minutes = seconds / 60;
+                int remainder = seconds % 60;
+                _pixelTimerText.text = $"{minutes:00}:{remainder:00}";
+            }
         }
 
         private void UpdateScore()
@@ -392,6 +419,9 @@ namespace EclipseProtocol.UI
 
                 CollectPixelHudReferences(existingRoot);
                 BuildDashHud(hudFont);
+                BuildRepairedNodesText(hudFont);
+                BuildPixelTimerText(hudFont);
+                BuildPauseOverlay(hudFont);
                 return;
             }
 
@@ -434,6 +464,9 @@ namespace EclipseProtocol.UI
             _pixelCellCountText.alignment = TextAnchor.MiddleRight;
 
             BuildDashHud(hudFont);
+            BuildRepairedNodesText(hudFont);
+            BuildPixelTimerText(hudFont);
+            BuildPauseOverlay(hudFont);
         }
 
         private void ConfigurePixelRoot(RectTransform root)
@@ -580,6 +613,136 @@ namespace EclipseProtocol.UI
             _dashCooldownText = cooldownText != null ? cooldownText.GetComponent<Text>() : null;
         }
 
+        private void BuildRepairedNodesText(Font hudFont)
+        {
+            Transform existingText = transform.Find(RepairedNodesTextName);
+            if (existingText != null)
+            {
+                existingText.gameObject.SetActive(true);
+                _repairedNodesText = existingText.GetComponent<Text>();
+                if (_repairedNodesText != null)
+                {
+                    ConfigureRepairedNodesText(_repairedNodesText);
+                }
+                return;
+            }
+
+            _repairedNodesText = CreatePixelText(RepairedNodesTextName, transform, hudFont, "Repaired nodes: 0/0", 22, Color.white);
+            ConfigureRepairedNodesText(_repairedNodesText);
+            AddOutline(_repairedNodesText.rectTransform, Color.black, 2f);
+        }
+
+        private static void ConfigureRepairedNodesText(Text repairedText)
+        {
+            repairedText.alignment = TextAnchor.MiddleCenter;
+            repairedText.horizontalOverflow = HorizontalWrapMode.Overflow;
+            repairedText.verticalOverflow = VerticalWrapMode.Overflow;
+
+            RectTransform textRect = repairedText.rectTransform;
+            textRect.anchorMin = new Vector2(0.5f, 1f);
+            textRect.anchorMax = new Vector2(0.5f, 1f);
+            textRect.pivot = new Vector2(0.5f, 1f);
+            textRect.anchoredPosition = new Vector2(0f, -12f);
+            textRect.sizeDelta = new Vector2(520f, 40f);
+            textRect.localScale = Vector3.one;
+        }
+
+        private void BuildPixelTimerText(Font hudFont)
+        {
+            Transform existingText = transform.Find(PixelTimerTextName);
+            if (existingText != null)
+            {
+                existingText.gameObject.SetActive(true);
+                _pixelTimerText = existingText.GetComponent<Text>();
+                if (_pixelTimerText != null)
+                {
+                    ConfigurePixelTimerText(_pixelTimerText);
+                }
+                return;
+            }
+
+            _pixelTimerText = CreatePixelText(PixelTimerTextName, transform, hudFont, "00:00", 22, Color.white);
+            ConfigurePixelTimerText(_pixelTimerText);
+            AddOutline(_pixelTimerText.rectTransform, Color.black, 2f);
+        }
+
+        private static void ConfigurePixelTimerText(Text timer)
+        {
+            timer.alignment = TextAnchor.MiddleRight;
+            timer.horizontalOverflow = HorizontalWrapMode.Overflow;
+            timer.verticalOverflow = VerticalWrapMode.Overflow;
+
+            RectTransform textRect = timer.rectTransform;
+            textRect.anchorMin = new Vector2(1f, 1f);
+            textRect.anchorMax = new Vector2(1f, 1f);
+            textRect.pivot = new Vector2(1f, 1f);
+            textRect.anchoredPosition = new Vector2(-16f, -12f);
+            textRect.sizeDelta = new Vector2(180f, 40f);
+            textRect.localScale = Vector3.one;
+        }
+
+        private void BuildPauseOverlay(Font hudFont)
+        {
+            Transform existingOverlay = transform.Find(PixelPauseOverlayName);
+            if (existingOverlay != null)
+            {
+                pauseOverlay = existingOverlay.gameObject;
+                ConfigurePauseOverlay(existingOverlay as RectTransform);
+                Transform pauseText = existingOverlay.Find("PauseText");
+                if (pauseText != null && pauseText.TryGetComponent(out Text existingText))
+                {
+                    ConfigurePauseText(existingText);
+                }
+                pauseOverlay.SetActive(false);
+                return;
+            }
+
+            RectTransform overlay = CreateRect(PixelPauseOverlayName, transform);
+            pauseOverlay = overlay.gameObject;
+            ConfigurePauseOverlay(overlay);
+
+            Image overlayImage = overlay.gameObject.AddComponent<Image>();
+            overlayImage.color = new Color(0f, 0f, 0f, 0.45f);
+            overlayImage.raycastTarget = false;
+
+            Text createdText = CreatePixelText("PauseText", overlay, hudFont, "pasued", 42, Color.white);
+            ConfigurePauseText(createdText);
+            AddOutline(createdText.rectTransform, Color.black, 3f);
+
+            pauseOverlay.SetActive(false);
+        }
+
+        private static void ConfigurePauseOverlay(RectTransform overlay)
+        {
+            if (overlay == null)
+            {
+                return;
+            }
+
+            overlay.anchorMin = Vector2.zero;
+            overlay.anchorMax = Vector2.one;
+            overlay.pivot = new Vector2(0.5f, 0.5f);
+            overlay.offsetMin = Vector2.zero;
+            overlay.offsetMax = Vector2.zero;
+            overlay.localScale = Vector3.one;
+        }
+
+        private static void ConfigurePauseText(Text text)
+        {
+            text.text = "pasued";
+            text.alignment = TextAnchor.MiddleCenter;
+            text.horizontalOverflow = HorizontalWrapMode.Overflow;
+            text.verticalOverflow = VerticalWrapMode.Overflow;
+
+            RectTransform textRect = text.rectTransform;
+            textRect.anchorMin = new Vector2(0.5f, 0.5f);
+            textRect.anchorMax = new Vector2(0.5f, 0.5f);
+            textRect.pivot = new Vector2(0.5f, 0.5f);
+            textRect.anchoredPosition = Vector2.zero;
+            textRect.sizeDelta = new Vector2(360f, 96f);
+            textRect.localScale = Vector3.one;
+        }
+
         private void UpdatePixelHud(float health01, float energy01)
         {
             SetPixelSegments(_pixelHealthSegments, health01, pixelHudHealthColor);
@@ -715,6 +878,18 @@ namespace EclipseProtocol.UI
             if (dashHud != null)
             {
                 dashHud.gameObject.SetActive(isVisible);
+            }
+
+            Transform repairedNodesText = transform != null ? transform.Find(RepairedNodesTextName) : null;
+            if (repairedNodesText != null)
+            {
+                repairedNodesText.gameObject.SetActive(isVisible);
+            }
+
+            Transform pixelTimerText = transform != null ? transform.Find(PixelTimerTextName) : null;
+            if (pixelTimerText != null)
+            {
+                pixelTimerText.gameObject.SetActive(isVisible);
             }
         }
 
