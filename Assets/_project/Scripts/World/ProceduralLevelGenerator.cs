@@ -785,7 +785,7 @@ namespace EclipseProtocol.World
                     continue;
                 }
 
-                position.y = 0.7f;
+                position.y = 2.0f;
                 
                 RepairNode repairNode = Instantiate(repairNodePrefab, position, Quaternion.identity, levelRoot);
                 repairNode.name = $"PowerNode_R{room.Index + 1:00}_{i + 1:00}";
@@ -828,6 +828,7 @@ namespace EclipseProtocol.World
                 }
                 else
                 {
+                    spawnPosition.y = 0.8f;
                     DronePatrolAI drone = Instantiate(patrolDronePrefab, spawnPosition, Quaternion.identity, levelRoot);
                     drone.name = $"PatrolDrone_R{room.Index + 1:00}_{i + 1:00}";
                     drone.Initialize(balanceData, patrolRoute);
