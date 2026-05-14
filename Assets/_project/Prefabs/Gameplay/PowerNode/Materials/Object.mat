@@ -15,7 +15,7 @@ Material:
   - _VOLUME_TRANSMISSION_OFF
   m_InvalidKeywords:
   - _VERTEX_COLORS_ON
-  m_LightmapFlags: 2
+  m_LightmapFlags: 6
   m_EnableInstancingVariants: 0
   m_DoubleSidedGI: 1
   m_CustomRenderQueue: 2000
