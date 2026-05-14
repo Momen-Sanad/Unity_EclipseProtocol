@@ -8,7 +8,7 @@ namespace EclipseProtocol.Core
         [SerializeField] private Vector3 offset = new Vector3(0f, 10f, -6f);
         [SerializeField] private Vector3 fixedEulerRotation = new Vector3(60f, 0f, 0f);
         [SerializeField, Min(0.01f)] private float smoothTime = 0.2f;
-        [SerializeField] private bool preventClipping = true;
+        [SerializeField] private bool preventClipping = false;
         [SerializeField] private LayerMask clippingMask = ~0;
         [SerializeField, Min(0f)] private float clippingPadding = 0.2f;
 

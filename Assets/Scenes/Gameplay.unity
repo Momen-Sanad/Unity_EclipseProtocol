@@ -797,7 +797,7 @@ MonoBehaviour:
   offset: {x: 0, y: 15, z: -10}
   fixedEulerRotation: {x: 60, y: 0, z: 0}
   smoothTime: 0.18
-  preventClipping: 1
+  preventClipping: 0
   clippingMask:
     serializedVersion: 2
     m_Bits: 4294967295

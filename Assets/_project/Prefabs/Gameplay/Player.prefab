@@ -13,6 +13,7 @@ GameObject:
   - component: {fileID: 3342599570299064534}
   - component: {fileID: 1709142106429520610}
   - component: {fileID: 5827074721238859301}
+  - component: {fileID: 6123618415606119422}
   - component: {fileID: 7703796674891034521}
   m_Layer: 8
   m_Name: Player
@@ -124,6 +125,27 @@ MonoBehaviour:
   turnSpeed: 14
   idleAnimationName: standing
   walkingAnimationName: walking
+--- !u!114 &6123618415606119422
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5158521581382280103}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d77dec51bb084bfa90335f7235cd9685, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::EclipseProtocol.Player.PlayerOcclusionOutline
+  targetCamera: {fileID: 0}
+  outlineShader: {fileID: 4800000, guid: b3478239c6a144ea89f86f322caf48fa, type: 3}
+  occlusionMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  outlineColor: {r: 0.15, g: 0.9, b: 1, a: 0.85}
+  outlineWidth: 0.045
+  visibilityCheckInterval: 0.08
+  targetHeightOffset: 0.9
 --- !u!114 &7703796674891034521
 MonoBehaviour:
   m_ObjectHideFlags: 0
