@@ -29,6 +29,14 @@ namespace EclipseProtocol.World
         [SerializeField] private Color repairIndicatorActiveColor = new Color(0.1f, 1f, 0.35f);
         [SerializeField] private bool blockEnemyNavigation = true;
         [SerializeField] private Vector3 navigationBlockerSize = new Vector3(1.6f, 2f, 1.6f);
+        [Header("Visuals")]
+        [SerializeField] private GameObject visualPrefab;
+        [SerializeField] private string visualAssetPath;
+        [SerializeField] private Vector3 visualLocalPosition = Vector3.zero;
+        [SerializeField] private Vector3 visualLocalEulerAngles = Vector3.zero;
+        [SerializeField] private Vector3 visualLocalScale = Vector3.one;
+        [SerializeField] private bool forceVisualRenderersVisible = true;
+        [SerializeField] private bool centerVisualBoundsOnRoot = true;
 
         private PlayerController _playerInside;
         private HUDController _hudController;
@@ -36,6 +44,7 @@ namespace EclipseProtocol.World
         private MaterialPropertyBlock _repairIndicatorPropertyBlock;
         private Renderer _repairIndicatorRenderer;
         private AudioSource _repairLoopSource;
+        private GameObject _visualInstance;
         private float _progressSeconds;
         private bool _promptShown;
         private static RepairNode _activeRepairNode;
@@ -48,6 +57,7 @@ namespace EclipseProtocol.World
         {
             Collider repairCollider = GetComponent<Collider>();
             // repairCollider.isTrigger = true;
+            ConfigureVisual();
 
             if (statusRenderer == null)
             {
@@ -55,6 +65,121 @@ namespace EclipseProtocol.World
             }
 
             ConfigureNavigationBlocker();
+        }
+
+        private void ConfigureVisual()
+        {
+            GameObject resolvedVisualPrefab = ResolveVisualPrefab();
+            if (resolvedVisualPrefab == null || _visualInstance != null)
+            {
+                return;
+            }
+
+            _visualInstance = CreateVisualInstance(resolvedVisualPrefab);
+            SetLayerRecursively(_visualInstance, gameObject.layer);
+
+            if (forceVisualRenderersVisible)
+            {
+                ShowVisualHierarchy(_visualInstance);
+            }
+
+            Renderer[] visualRenderers = _visualInstance.GetComponentsInChildren<Renderer>(true);
+            if (visualRenderers.Length == 0)
+            {
+                return;
+            }
+
+            if (statusRenderer == null)
+            {
+                statusRenderer = visualRenderers[0];
+            }
+
+            if (forceVisualRenderersVisible)
+            {
+                EnableRenderers(visualRenderers);
+            }
+
+            if (centerVisualBoundsOnRoot)
+            {
+                CenterVisualBoundsOnRoot(_visualInstance.transform, visualRenderers);
+            }
+        }
+
+        private GameObject ResolveVisualPrefab()
+        {
+            if (visualPrefab != null)
+            {
+                return visualPrefab;
+            }
+
+#if UNITY_EDITOR
+            if (!string.IsNullOrWhiteSpace(visualAssetPath))
+            {
+                return UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(visualAssetPath);
+            }
+#endif
+
+            return null;
+        }
+
+        private GameObject CreateVisualInstance(GameObject resolvedVisualPrefab)
+        {
+            GameObject instance = Instantiate(resolvedVisualPrefab, transform);
+            instance.name = resolvedVisualPrefab.name;
+            ApplyVisualTransform(instance.transform);
+            return instance;
+        }
+
+        private void ApplyVisualTransform(Transform visualTransform)
+        {
+            visualTransform.localPosition = visualLocalPosition;
+            visualTransform.localRotation = Quaternion.Euler(visualLocalEulerAngles);
+            visualTransform.localScale = visualLocalScale;
+        }
+
+        private void CenterVisualBoundsOnRoot(Transform visualTransform, Renderer[] visualRenderers)
+        {
+            Bounds bounds = CalculateRendererBounds(visualRenderers);
+            visualTransform.position += transform.position - bounds.center;
+        }
+
+        private static void EnableRenderers(Renderer[] renderers)
+        {
+            for (int i = 0; i < renderers.Length; i++)
+            {
+                renderers[i].enabled = true;
+            }
+        }
+
+        private static void SetLayerRecursively(GameObject targetObject, int layer)
+        {
+            targetObject.layer = layer;
+            Transform targetTransform = targetObject.transform;
+            for (int i = 0; i < targetTransform.childCount; i++)
+            {
+                SetLayerRecursively(targetTransform.GetChild(i).gameObject, layer);
+            }
+        }
+
+        private static void ShowVisualHierarchy(GameObject targetObject)
+        {
+            targetObject.SetActive(true);
+            Transform targetTransform = targetObject.transform;
+            for (int i = 0; i < targetTransform.childCount; i++)
+            {
+                ShowVisualHierarchy(targetTransform.GetChild(i).gameObject);
+            }
+        }
+
+        private static Bounds CalculateRendererBounds(Renderer[] renderers)
+        {
+            Bounds bounds = renderers[0].bounds;
+            for (int i = 1; i < renderers.Length; i++)
+            {
+                bounds.Encapsulate(renderers[i].bounds);
+            }
+
+            return bounds;
         }
 
         private void Start()
