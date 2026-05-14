@@ -15,6 +15,8 @@ namespace EclipseProtocol.Player
         [SerializeField] private float modelForwardYawOffset = 180f;
         [SerializeField] private string idleAnimationName = "standing";
         [SerializeField] private string walkingAnimationName = "walking";
+        [SerializeField] private string dashAnimationName = "walking";
+        [SerializeField, Min(0.1f)] private float dashAnimationSpeed = 1.8f;
 
         private GameObject _visualInstance;
         private PlayerController _playerController;
@@ -23,6 +25,7 @@ namespace EclipseProtocol.Player
         private AnimationClipPlayable _currentClipPlayable;
         private AnimationClip _idleClip;
         private AnimationClip _walkingClip;
+        private AnimationClip _dashClip;
         private string _currentAnimationName;
 
         private void Awake()
@@ -40,10 +43,12 @@ namespace EclipseProtocol.Player
 
             if (_animationGraph.IsValid())
             {
+                bool shouldDash = _playerController.IsDashing;
                 bool shouldWalk = _playerController.HasMoveInput;
-                AnimationClip targetClip = shouldWalk ? _walkingClip : _idleClip;
-                string targetName = shouldWalk ? walkingAnimationName : idleAnimationName;
-                PlayAnimation(targetClip, targetName);
+                AnimationClip targetClip = shouldDash ? _dashClip : shouldWalk ? _walkingClip : _idleClip;
+                string targetName = shouldDash ? dashAnimationName : shouldWalk ? walkingAnimationName : idleAnimationName;
+                float targetSpeed = shouldDash ? dashAnimationSpeed : 1f;
+                PlayAnimation(targetClip, targetName, targetSpeed);
                 RestartLoopIfNeeded();
             }
 
@@ -190,6 +195,12 @@ namespace EclipseProtocol.Player
             AnimationClip[] clips = Resources.LoadAll<AnimationClip>(robotResourcePath);
             _idleClip = FindClip(clips, idleAnimationName);
             _walkingClip = FindClip(clips, walkingAnimationName);
+            _dashClip = FindClip(clips, dashAnimationName);
+            if (_dashClip == null)
+            {
+                _dashClip = _walkingClip;
+                dashAnimationName = walkingAnimationName;
+            }
 
             if (_idleClip == null && _walkingClip == null)
             {
@@ -202,14 +213,24 @@ namespace EclipseProtocol.Player
             AnimationPlayableOutput output = AnimationPlayableOutput.Create(_animationGraph, "RobotAnimation", _animator);
             output.SetSourcePlayable(Playable.Null);
 
-            PlayAnimation(_idleClip != null ? _idleClip : _walkingClip, _idleClip != null ? idleAnimationName : walkingAnimationName);
+            PlayAnimation(_idleClip != null ? _idleClip : _walkingClip, _idleClip != null ? idleAnimationName : walkingAnimationName, 1f);
             _animationGraph.Play();
         }
 
-        private void PlayAnimation(AnimationClip clip, string animationName)
+        private void PlayAnimation(AnimationClip clip, string animationName, float speed)
         {
-            if (clip == null || _currentAnimationName == animationName || !_animationGraph.IsValid())
+            if (clip == null || !_animationGraph.IsValid())
             {
+                return;
+            }
+
+            if (_currentAnimationName == animationName)
+            {
+                if (_currentClipPlayable.IsValid())
+                {
+                    _currentClipPlayable.SetSpeed(speed);
+                }
+
                 return;
             }
 
@@ -220,7 +241,7 @@ namespace EclipseProtocol.Player
 
             _currentClipPlayable = AnimationClipPlayable.Create(_animationGraph, clip);
             _currentClipPlayable.SetTime(0d);
-            _currentClipPlayable.SetSpeed(1d);
+            _currentClipPlayable.SetSpeed(speed);
 
             AnimationPlayableOutput output = (AnimationPlayableOutput)_animationGraph.GetOutput(0);
             output.SetSourcePlayable(_currentClipPlayable);
