@@ -12,6 +12,7 @@ namespace EclipseProtocol.Player
         [SerializeField] private Vector3 localEulerAngles;
         [SerializeField] private bool faceMoveDirection = true;
         [SerializeField, Min(0f)] private float turnSpeed = 14f;
+        [SerializeField] private float modelForwardYawOffset = 180f;
         [SerializeField] private string idleAnimationName = "standing";
         [SerializeField] private string walkingAnimationName = "walking";
 
@@ -32,17 +33,21 @@ namespace EclipseProtocol.Player
 
         private void Update()
         {
-            if (_playerController == null || !_animationGraph.IsValid())
+            if (_playerController == null)
             {
                 return;
             }
 
-            bool shouldWalk = _playerController.HasMoveInput;
-            AnimationClip targetClip = shouldWalk ? _walkingClip : _idleClip;
-            string targetName = shouldWalk ? walkingAnimationName : idleAnimationName;
-            PlayAnimation(targetClip, targetName);
+            if (_animationGraph.IsValid())
+            {
+                bool shouldWalk = _playerController.HasMoveInput;
+                AnimationClip targetClip = shouldWalk ? _walkingClip : _idleClip;
+                string targetName = shouldWalk ? walkingAnimationName : idleAnimationName;
+                PlayAnimation(targetClip, targetName);
+                RestartLoopIfNeeded();
+            }
+
             UpdateFacingDirection();
-            RestartLoopIfNeeded();
         }
 
         private void OnDisable()
@@ -115,7 +120,7 @@ namespace EclipseProtocol.Player
             }
 
             Quaternion targetRotation = Quaternion.LookRotation(localDirection.normalized, Vector3.up)
-                * Quaternion.Euler(localEulerAngles);
+                * Quaternion.Euler(localEulerAngles + Vector3.up * modelForwardYawOffset);
             _visualInstance.transform.localRotation = Quaternion.Slerp(
                 _visualInstance.transform.localRotation,
                 targetRotation,

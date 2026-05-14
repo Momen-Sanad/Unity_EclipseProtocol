@@ -123,6 +123,7 @@ MonoBehaviour:
   localEulerAngles: {x: 0, y: 0, z: 0}
   faceMoveDirection: 1
   turnSpeed: 14
+  modelForwardYawOffset: 180
   idleAnimationName: standing
   walkingAnimationName: walking
 --- !u!114 &6123618415606119422

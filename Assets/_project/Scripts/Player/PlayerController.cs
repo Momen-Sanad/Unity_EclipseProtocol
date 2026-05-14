@@ -358,6 +358,16 @@ namespace EclipseProtocol.Player
             }
 
             _moveInput = new Vector2(x, y);
+            Vector3 inputDirection = new Vector3(_moveInput.x, 0f, _moveInput.y);
+            if (inputDirection.sqrMagnitude > 1f)
+            {
+                inputDirection.Normalize();
+            }
+
+            if (inputDirection.sqrMagnitude > 0.001f)
+            {
+                _lastNonZeroMoveDirection = inputDirection.normalized;
+            }
 
             if (keyboard.spaceKey.wasPressedThisFrame)
             {
