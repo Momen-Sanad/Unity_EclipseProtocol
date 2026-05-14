@@ -48,6 +48,7 @@ namespace EclipseProtocol.Player
         public float DashCooldownRemaining => Mathf.Max(0f, _dashCooldownTimer);
         public float DashCooldownDuration => balanceData != null ? balanceData.dashCooldown : 8f;
         public bool IsDashing => _isDashing;
+        public bool HasMoveInput => _moveInput.sqrMagnitude > 0.01f || _isDashing;
         public bool IsGrounded { get; private set; }
         public bool IsInvulnerable { get; private set; }
 

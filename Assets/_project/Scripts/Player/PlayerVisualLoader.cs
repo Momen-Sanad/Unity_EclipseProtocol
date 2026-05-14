@@ -1,20 +1,69 @@
 using UnityEngine;
+using UnityEngine.Animations;
+using UnityEngine.Playables;
 
 namespace EclipseProtocol.Player
 {
     [DisallowMultipleComponent]
-    [DefaultExecutionOrder(-100)]
     public class PlayerVisualLoader : MonoBehaviour
     {
         [SerializeField] private string robotResourcePath = "Player/low_poly_animated_robot";
         [SerializeField, Min(0.01f)] private float targetHeight = 2.4f;
         [SerializeField] private Vector3 localEulerAngles;
+        [SerializeField] private string idleAnimationName = "standing";
+        [SerializeField] private string walkingAnimationName = "walking";
 
         private GameObject _visualInstance;
+        private PlayerController _playerController;
+        private Animator _animator;
+        private PlayableGraph _animationGraph;
+        private AnimationClipPlayable _currentClipPlayable;
+        private AnimationClip _idleClip;
+        private AnimationClip _walkingClip;
+        private string _currentAnimationName;
 
         private void Awake()
         {
+            _playerController = GetComponent<PlayerController>();
             LoadVisual();
+        }
+
+        private void Update()
+        {
+            if (_playerController == null || !_animationGraph.IsValid())
+            {
+                return;
+            }
+
+            bool shouldWalk = _playerController.HasMoveInput;
+            AnimationClip targetClip = shouldWalk ? _walkingClip : _idleClip;
+            string targetName = shouldWalk ? walkingAnimationName : idleAnimationName;
+            PlayAnimation(targetClip, targetName);
+            RestartLoopIfNeeded();
+        }
+
+        private void OnDisable()
+        {
+            if (_animationGraph.IsValid())
+            {
+                _animationGraph.Stop();
+            }
+        }
+
+        private void OnEnable()
+        {
+            if (_animationGraph.IsValid())
+            {
+                _animationGraph.Play();
+            }
+        }
+
+        private void OnDestroy()
+        {
+            if (_animationGraph.IsValid())
+            {
+                _animationGraph.Destroy();
+            }
         }
 
         private void LoadVisual()
@@ -39,6 +88,7 @@ namespace EclipseProtocol.Player
             RemoveGameplayComponents(_visualInstance);
             ScaleAndGroundVisual();
             SetLayerRecursively(_visualInstance, gameObject.layer);
+            SetupAnimation();
         }
 
         private void ScaleAndGroundVisual()
@@ -91,6 +141,81 @@ namespace EclipseProtocol.Player
             {
                 SetLayerRecursively(child.gameObject, layer);
             }
+        }
+
+        private void SetupAnimation()
+        {
+            _animator = _visualInstance.GetComponentInChildren<Animator>(true);
+            if (_animator == null)
+            {
+                _animator = _visualInstance.AddComponent<Animator>();
+            }
+
+            AnimationClip[] clips = Resources.LoadAll<AnimationClip>(robotResourcePath);
+            _idleClip = FindClip(clips, idleAnimationName);
+            _walkingClip = FindClip(clips, walkingAnimationName);
+
+            if (_idleClip == null && _walkingClip == null)
+            {
+                Debug.LogWarning($"[PlayerVisualLoader] No animation clips found at Resources/{robotResourcePath}.", this);
+                return;
+            }
+
+            _animationGraph = PlayableGraph.Create("PlayerRobotAnimation");
+            _animationGraph.SetTimeUpdateMode(DirectorUpdateMode.GameTime);
+            AnimationPlayableOutput output = AnimationPlayableOutput.Create(_animationGraph, "RobotAnimation", _animator);
+            output.SetSourcePlayable(Playable.Null);
+
+            PlayAnimation(_idleClip != null ? _idleClip : _walkingClip, _idleClip != null ? idleAnimationName : walkingAnimationName);
+            _animationGraph.Play();
+        }
+
+        private void PlayAnimation(AnimationClip clip, string animationName)
+        {
+            if (clip == null || _currentAnimationName == animationName || !_animationGraph.IsValid())
+            {
+                return;
+            }
+
+            if (_currentClipPlayable.IsValid())
+            {
+                _animationGraph.DestroyPlayable(_currentClipPlayable);
+            }
+
+            _currentClipPlayable = AnimationClipPlayable.Create(_animationGraph, clip);
+            _currentClipPlayable.SetTime(0d);
+            _currentClipPlayable.SetSpeed(1d);
+
+            AnimationPlayableOutput output = (AnimationPlayableOutput)_animationGraph.GetOutput(0);
+            output.SetSourcePlayable(_currentClipPlayable);
+            _currentAnimationName = animationName;
+        }
+
+        private void RestartLoopIfNeeded()
+        {
+            if (!_currentClipPlayable.IsValid())
+            {
+                return;
+            }
+
+            AnimationClip clip = _currentClipPlayable.GetAnimationClip();
+            if (clip != null && clip.length > 0f && _currentClipPlayable.GetTime() >= clip.length)
+            {
+                _currentClipPlayable.SetTime(0d);
+            }
+        }
+
+        private static AnimationClip FindClip(AnimationClip[] clips, string clipName)
+        {
+            for (int i = 0; i < clips.Length; i++)
+            {
+                if (string.Equals(clips[i].name, clipName, System.StringComparison.OrdinalIgnoreCase))
+                {
+                    return clips[i];
+                }
+            }
+
+            return null;
         }
     }
 }
