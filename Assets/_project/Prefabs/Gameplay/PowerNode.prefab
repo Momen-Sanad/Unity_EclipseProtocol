@@ -72,8 +72,10 @@ MonoBehaviour:
   visualLocalScale: {x: 0.5, y: 0.7692308, z: 0.5}
   forceVisualRenderersVisible: 1
   centerVisualBoundsOnRoot: 1
---- !u!65 &8406832526961215936
-BoxCollider:
+  addVisualMeshColliders: 1
+  visualMeshCollidersConvex: 0
+--- !u!64 &8406832526961215936
+MeshCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -90,9 +92,10 @@ BoxCollider:
   m_IsTrigger: 0
   m_ProvidesContacts: 0
   m_Enabled: 1
-  serializedVersion: 3
-  m_Size: {x: 3.2, y: 3.4, z: 3.2}
-  m_Center: {x: 0, y: 0.75, z: 0}
+  serializedVersion: 5
+  m_Convex: 1
+  m_CookingOptions: 30
+  m_Mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
 --- !u!1 &5837432333485527656
 GameObject:
   m_ObjectHideFlags: 0
