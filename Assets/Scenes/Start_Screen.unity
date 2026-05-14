@@ -646,8 +646,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -782.4, y: 297.8}
-  m_SizeDelta: {x: 691.4487, y: 106.5623}
+  m_AnchoredPosition: {x: 37, y: 184}
+  m_SizeDelta: {x: 691.4487, y: 171.2255}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &481059888
 MonoBehaviour:
@@ -669,7 +669,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: Eclipse Protocol
+  m_text: "Eclipse \nProtocol"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
@@ -696,8 +696,8 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 70
-  m_fontSizeBase: 70
+  m_fontSize: 90
+  m_fontSizeBase: 90
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
@@ -1109,7 +1109,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -750.01764, y: -213.08429}
+  m_AnchoredPosition: {x: 37.000183, y: -292.00677}
   m_SizeDelta: {x: 312.4778, y: 64.7717}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1694648769
@@ -1245,7 +1245,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -750.01764, y: -73.458206}
+  m_AnchoredPosition: {x: 37.000183, y: -152.38069}
   m_SizeDelta: {x: 312.4778, y: 64.7717}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1969776577
@@ -1453,7 +1453,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -750.01776, y: 63.9225}
+  m_AnchoredPosition: {x: 37, y: -15}
   m_SizeDelta: {x: 312.4778, y: 64.7717}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1984997587
