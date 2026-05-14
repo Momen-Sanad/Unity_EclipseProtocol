@@ -1,6 +1,7 @@
 using EclipseProtocol.Core;
 using EclipseProtocol.Player;
 using EclipseProtocol.World;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -53,7 +54,8 @@ namespace EclipseProtocol.UI
         [Header("Pixel HUD")]
         [SerializeField] private bool usePixelHud = true;
         [SerializeField] private Font pixelHudFont;
-        [SerializeField, Min(0.5f)] private float pixelHudScale = 1.5f;
+        [SerializeField] private TMP_FontAsset pixelHudTmpFont;
+        [SerializeField, Min(1f)] private float pixelHudScale = 1f;
         [SerializeField] private Color pixelHudPanelColor = new Color(0.04f, 0.1f, 0.2f, 0.82f);
         [SerializeField] private Color pixelHudBorderColor = new Color(0.38f, 0.58f, 0.9f, 1f);
         [SerializeField] private Color pixelHudHealthColor = new Color(0.35f, 1f, 0.52f, 1f);
@@ -74,12 +76,13 @@ namespace EclipseProtocol.UI
         private float _messageTimer;
         private Image[] _pixelHealthSegments;
         private Image[] _pixelEnergySegments;
-        private Text _pixelCellCountText;
+        private TMP_Text _pixelCellCountText;
         private Image _dashIconImage;
-        private Text _dashCooldownText;
-        private Text _repairedNodesText;
-        private Text _pixelTimerText;
+        private TMP_Text _dashCooldownText;
+        private TMP_Text _repairedNodesText;
+        private TMP_Text _pixelTimerText;
         private int _collectedCellCount;
+        private bool _runtimePixelHudBuilt;
 #if UNITY_EDITOR
         private bool _isEditorHudRefreshQueued;
 #endif
@@ -104,11 +107,19 @@ namespace EclipseProtocol.UI
         {
             if (usePixelHud)
             {
+                if (Application.isPlaying && _runtimePixelHudBuilt)
+                {
+                    SetClassicResourceHudVisible(false);
+                    return;
+                }
+
                 BuildPixelHud();
+                _runtimePixelHudBuilt = Application.isPlaying;
                 SetClassicResourceHudVisible(false);
                 return;
             }
 
+            _runtimePixelHudBuilt = false;
             SetPixelHudVisible(false);
             SetClassicResourceHudVisible(true);
         }
@@ -254,7 +265,7 @@ namespace EclipseProtocol.UI
             if (_repairedNodesText == null && transform != null)
             {
                 Transform repairedText = transform.Find(RepairedNodesTextName);
-                _repairedNodesText = repairedText != null ? repairedText.GetComponent<Text>() : null;
+                _repairedNodesText = repairedText != null ? repairedText.GetComponent<TMP_Text>() : null;
             }
 
             if (_repairedNodesText != null)
@@ -438,28 +449,17 @@ namespace EclipseProtocol.UI
                 return;
             }
 
-            Font hudFont = pixelHudFont != null ? pixelHudFont : Resources.GetBuiltinResource<Font>("Arial.ttf");
+            TMP_FontAsset hudFont = ResolvePixelHudFontAsset();
             if (hudFont == null)
             {
-                Debug.LogError("[HUDController] Pixel HUD needs a font assigned.", this);
+                Debug.LogError("[HUDController] Pixel HUD needs a TMP font asset assigned.", this);
                 return;
             }
 
             Transform existingRoot = transform.Find(PixelHudRootName);
             if (existingRoot != null)
             {
-                existingRoot.gameObject.SetActive(true);
-                if (existingRoot is RectTransform existingRect)
-                {
-                    ConfigurePixelRoot(existingRect);
-                }
-
-                CollectPixelHudReferences(existingRoot);
-                BuildDashHud(hudFont);
-                BuildRepairedNodesText(hudFont);
-                BuildPixelTimerText(hudFont);
-                BuildPauseOverlay(hudFont);
-                return;
+                DestroyGeneratedHudObject(existingRoot.gameObject);
             }
 
             RectTransform root = CreateRect(PixelHudRootName, transform);
@@ -483,7 +483,7 @@ namespace EclipseProtocol.UI
             cellsFrameImage.color = new Color(0.04f, 0.12f, 0.24f, 0.92f);
             AddOutline(cellsFrame, pixelHudBorderColor, 1.5f);
 
-            Text cellsLabel = CreatePixelText("CellsLabel", cellsFrame, hudFont, "CELLS", 14, Color.white);
+            TMP_Text cellsLabel = CreatePixelText("CellsLabel", cellsFrame, hudFont, "CELLS", 14, Color.white);
             RectTransform cellsLabelRect = cellsLabel.rectTransform;
             cellsLabelRect.anchorMin = new Vector2(0f, 0f);
             cellsLabelRect.anchorMax = new Vector2(0f, 1f);
@@ -498,12 +498,54 @@ namespace EclipseProtocol.UI
             cellsCountRect.pivot = new Vector2(1f, 0.5f);
             cellsCountRect.anchoredPosition = new Vector2(-12f, 0f);
             cellsCountRect.sizeDelta = new Vector2(44f, 0f);
-            _pixelCellCountText.alignment = TextAnchor.MiddleRight;
+            _pixelCellCountText.alignment = TextAlignmentOptions.MidlineRight;
 
             BuildDashHud(hudFont);
             BuildRepairedNodesText(hudFont);
             BuildPixelTimerText(hudFont);
             BuildPauseOverlay(hudFont);
+        }
+
+        private TMP_FontAsset ResolvePixelHudFontAsset()
+        {
+            if (pixelHudTmpFont != null)
+            {
+                ConfigureTmpFontAsset(pixelHudTmpFont);
+                return pixelHudTmpFont;
+            }
+
+            TMP_FontAsset fallbackFont = TMP_Settings.defaultFontAsset;
+            if (fallbackFont != null)
+            {
+                ConfigureTmpFontAsset(fallbackFont);
+            }
+
+            return fallbackFont;
+        }
+
+        private static void ConfigureTmpFontAsset(TMP_FontAsset fontAsset)
+        {
+            if (fontAsset == null)
+            {
+                return;
+            }
+
+            Texture2D atlasTexture = fontAsset.atlasTexture;
+            if (atlasTexture != null)
+            {
+                atlasTexture.filterMode = FilterMode.Point;
+                atlasTexture.wrapMode = TextureWrapMode.Clamp;
+                atlasTexture.anisoLevel = 0;
+            }
+
+            if (fontAsset.material != null)
+            {
+                fontAsset.material.SetFloat(ShaderUtilities.ID_FaceDilate, 0f);
+                fontAsset.material.SetFloat(ShaderUtilities.ID_OutlineSoftness, 0f);
+                fontAsset.material.SetFloat(ShaderUtilities.ID_OutlineWidth, 0f);
+                fontAsset.material.SetFloat(ShaderUtilities.ID_UnderlaySoftness, 0f);
+                fontAsset.material.SetFloat(ShaderUtilities.ID_UnderlayDilate, 0f);
+            }
         }
 
         private void ConfigurePixelRoot(RectTransform root)
@@ -513,10 +555,11 @@ namespace EclipseProtocol.UI
             root.pivot = new Vector2(0f, 1f);
             root.anchoredPosition = new Vector2(8f, -8f);
             root.sizeDelta = new Vector2(390f, 138f);
-            root.localScale = new Vector3(pixelHudScale, pixelHudScale, 1f);
+            float powerOfTwoScale = Mathf.Max(1f, Mathf.Pow(2f, Mathf.Round(Mathf.Log(Mathf.Max(1f, pixelHudScale), 2f))));
+            root.localScale = new Vector3(powerOfTwoScale, powerOfTwoScale, 1f);
         }
 
-        private Image[] CreatePixelBar(RectTransform parent, string name, Vector2 position, string label, Color fillColor, Font font)
+        private Image[] CreatePixelBar(RectTransform parent, string name, Vector2 position, string label, Color fillColor, TMP_FontAsset font)
         {
             RectTransform frame = CreateRect(name + "Frame", parent);
             frame.anchorMin = new Vector2(0f, 1f);
@@ -528,7 +571,7 @@ namespace EclipseProtocol.UI
             frameImage.color = new Color(0.05f, 0.13f, 0.24f, 0.95f);
             AddOutline(frame, pixelHudBorderColor, 1.5f);
 
-            Text labelText = CreatePixelText(name + "Label", frame, font, label, 14, fillColor);
+            TMP_Text labelText = CreatePixelText(name + "Label", frame, font, label, 14, fillColor);
             RectTransform labelRect = labelText.rectTransform;
             labelRect.anchorMin = new Vector2(0f, 0f);
             labelRect.anchorMax = new Vector2(0f, 1f);
@@ -560,17 +603,23 @@ namespace EclipseProtocol.UI
             return rectObject.GetComponent<RectTransform>();
         }
 
-        private static Text CreatePixelText(string name, Transform parent, Font font, string value, int size, Color color)
+        private static TMP_Text CreatePixelText(string name, Transform parent, TMP_FontAsset font, string value, int size, Color color)
         {
             RectTransform textRect = CreateRect(name, parent);
-            Text text = textRect.gameObject.AddComponent<Text>();
+            TMP_Text text = textRect.gameObject.AddComponent<TextMeshProUGUI>();
             text.font = font;
             text.text = value;
             text.fontSize = size;
             text.color = color;
-            text.alignment = TextAnchor.MiddleLeft;
-            text.horizontalOverflow = HorizontalWrapMode.Overflow;
-            text.verticalOverflow = VerticalWrapMode.Overflow;
+            text.alignment = TextAlignmentOptions.MidlineLeft;
+            text.enableWordWrapping = false;
+            text.overflowMode = TextOverflowModes.Overflow;
+            text.raycastTarget = false;
+            text.extraPadding = false;
+            text.fontSharedMaterial = font != null ? font.material : null;
+            text.outlineWidth = 0f;
+            text.fontMaterial.SetFloat(ShaderUtilities.ID_FaceDilate, 0f);
+            text.fontMaterial.SetFloat(ShaderUtilities.ID_OutlineSoftness, 0f);
             return text;
         }
 
@@ -581,22 +630,32 @@ namespace EclipseProtocol.UI
             outline.effectDistance = new Vector2(distance, -distance);
         }
 
-        private void BuildDashHud(Font hudFont)
+        private static void DestroyGeneratedHudObject(GameObject target)
+        {
+            if (target == null)
+            {
+                return;
+            }
+
+            if (Application.isPlaying)
+            {
+                target.SetActive(false);
+                Destroy(target);
+            }
+            else
+            {
+                DestroyImmediate(target);
+            }
+        }
+
+        private void BuildDashHud(TMP_FontAsset hudFont)
         {
             const string dashRootName = "DashCooldownIcon";
 
             Transform existingRoot = transform.Find(dashRootName);
             if (existingRoot != null)
             {
-                existingRoot.gameObject.SetActive(true);
-                if (existingRoot is RectTransform existingRect)
-                {
-                    ConfigureDashRoot(existingRect);
-                }
-
-                CollectDashHudReferences(existingRoot);
-                ConfigureDashHudVisuals();
-                return;
+                DestroyGeneratedHudObject(existingRoot.gameObject);
             }
 
             RectTransform root = CreateRect(dashRootName, transform);
@@ -612,7 +671,7 @@ namespace EclipseProtocol.UI
             textRect.anchorMax = Vector2.one;
             textRect.offsetMin = Vector2.zero;
             textRect.offsetMax = Vector2.zero;
-            _dashCooldownText.alignment = TextAnchor.MiddleCenter;
+            _dashCooldownText.alignment = TextAlignmentOptions.Center;
             AddOutline(textRect, Color.black, 2f);
 
             ConfigureDashHudVisuals();
@@ -647,21 +706,15 @@ namespace EclipseProtocol.UI
         {
             _dashIconImage = root.GetComponent<Image>();
             Transform cooldownText = root.Find("DashCooldownText");
-            _dashCooldownText = cooldownText != null ? cooldownText.GetComponent<Text>() : null;
+            _dashCooldownText = cooldownText != null ? cooldownText.GetComponent<TMP_Text>() : null;
         }
 
-        private void BuildRepairedNodesText(Font hudFont)
+        private void BuildRepairedNodesText(TMP_FontAsset hudFont)
         {
             Transform existingText = transform.Find(RepairedNodesTextName);
             if (existingText != null)
             {
-                existingText.gameObject.SetActive(true);
-                _repairedNodesText = existingText.GetComponent<Text>();
-                if (_repairedNodesText != null)
-                {
-                    ConfigureRepairedNodesText(_repairedNodesText);
-                }
-                return;
+                DestroyGeneratedHudObject(existingText.gameObject);
             }
 
             _repairedNodesText = CreatePixelText(RepairedNodesTextName, transform, hudFont, "Repaired nodes: 0/0", 22, Color.white);
@@ -669,11 +722,11 @@ namespace EclipseProtocol.UI
             AddOutline(_repairedNodesText.rectTransform, Color.black, 2f);
         }
 
-        private static void ConfigureRepairedNodesText(Text repairedText)
+        private static void ConfigureRepairedNodesText(TMP_Text repairedText)
         {
-            repairedText.alignment = TextAnchor.MiddleCenter;
-            repairedText.horizontalOverflow = HorizontalWrapMode.Overflow;
-            repairedText.verticalOverflow = VerticalWrapMode.Overflow;
+            repairedText.alignment = TextAlignmentOptions.Center;
+            repairedText.enableWordWrapping = false;
+            repairedText.overflowMode = TextOverflowModes.Overflow;
 
             RectTransform textRect = repairedText.rectTransform;
             textRect.anchorMin = new Vector2(0.5f, 1f);
@@ -684,18 +737,12 @@ namespace EclipseProtocol.UI
             textRect.localScale = Vector3.one;
         }
 
-        private void BuildPixelTimerText(Font hudFont)
+        private void BuildPixelTimerText(TMP_FontAsset hudFont)
         {
             Transform existingText = transform.Find(PixelTimerTextName);
             if (existingText != null)
             {
-                existingText.gameObject.SetActive(true);
-                _pixelTimerText = existingText.GetComponent<Text>();
-                if (_pixelTimerText != null)
-                {
-                    ConfigurePixelTimerText(_pixelTimerText);
-                }
-                return;
+                DestroyGeneratedHudObject(existingText.gameObject);
             }
 
             _pixelTimerText = CreatePixelText(PixelTimerTextName, transform, hudFont, "00:00", 22, Color.white);
@@ -703,11 +750,11 @@ namespace EclipseProtocol.UI
             AddOutline(_pixelTimerText.rectTransform, Color.black, 2f);
         }
 
-        private static void ConfigurePixelTimerText(Text timer)
+        private static void ConfigurePixelTimerText(TMP_Text timer)
         {
-            timer.alignment = TextAnchor.MiddleRight;
-            timer.horizontalOverflow = HorizontalWrapMode.Overflow;
-            timer.verticalOverflow = VerticalWrapMode.Overflow;
+            timer.alignment = TextAlignmentOptions.MidlineRight;
+            timer.enableWordWrapping = false;
+            timer.overflowMode = TextOverflowModes.Overflow;
 
             RectTransform textRect = timer.rectTransform;
             textRect.anchorMin = new Vector2(1f, 1f);
@@ -718,20 +765,12 @@ namespace EclipseProtocol.UI
             textRect.localScale = Vector3.one;
         }
 
-        private void BuildPauseOverlay(Font hudFont)
+        private void BuildPauseOverlay(TMP_FontAsset hudFont)
         {
             Transform existingOverlay = transform.Find(PixelPauseOverlayName);
             if (existingOverlay != null)
             {
-                pauseOverlay = existingOverlay.gameObject;
-                ConfigurePauseOverlay(existingOverlay as RectTransform);
-                Transform pauseText = existingOverlay.Find("PauseText");
-                if (pauseText != null && pauseText.TryGetComponent(out Text existingText))
-                {
-                    ConfigurePauseText(existingText);
-                }
-                pauseOverlay.SetActive(false);
-                return;
+                DestroyGeneratedHudObject(existingOverlay.gameObject);
             }
 
             RectTransform overlay = CreateRect(PixelPauseOverlayName, transform);
@@ -742,7 +781,7 @@ namespace EclipseProtocol.UI
             overlayImage.color = new Color(0f, 0f, 0f, 0.45f);
             overlayImage.raycastTarget = false;
 
-            Text createdText = CreatePixelText("PauseText", overlay, hudFont, "pasued", 42, Color.white);
+            TMP_Text createdText = CreatePixelText("PauseText", overlay, hudFont, "paused", 42, Color.white);
             ConfigurePauseText(createdText);
             AddOutline(createdText.rectTransform, Color.black, 3f);
 
@@ -764,12 +803,12 @@ namespace EclipseProtocol.UI
             overlay.localScale = Vector3.one;
         }
 
-        private static void ConfigurePauseText(Text text)
+        private static void ConfigurePauseText(TMP_Text text)
         {
-            text.text = "pasued";
-            text.alignment = TextAnchor.MiddleCenter;
-            text.horizontalOverflow = HorizontalWrapMode.Overflow;
-            text.verticalOverflow = VerticalWrapMode.Overflow;
+            text.text = "paused";
+            text.alignment = TextAlignmentOptions.Center;
+            text.enableWordWrapping = false;
+            text.overflowMode = TextOverflowModes.Overflow;
 
             RectTransform textRect = text.rectTransform;
             textRect.anchorMin = new Vector2(0.5f, 0.5f);
@@ -815,7 +854,7 @@ namespace EclipseProtocol.UI
             _pixelHealthSegments = CollectSegments(root, "HealthFrame", "HealthSegment_");
             _pixelEnergySegments = CollectSegments(root, "EnergyFrame", "EnergySegment_");
             Transform cellsCount = root.Find("CellsFrame/CellsCount");
-            _pixelCellCountText = cellsCount != null ? cellsCount.GetComponent<Text>() : null;
+            _pixelCellCountText = cellsCount != null ? cellsCount.GetComponent<TMP_Text>() : null;
         }
 
         private static Image[] CollectSegments(Transform root, string frameName, string segmentPrefix)

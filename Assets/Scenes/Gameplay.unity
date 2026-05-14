@@ -669,7 +669,8 @@ MonoBehaviour:
   timerLowColor: {r: 1, g: 0.1, b: 0.08, a: 1}
   usePixelHud: 1
   pixelHudFont: {fileID: 12800000, guid: d7cb3c2eb4e95a5b6ba7f8643c887015, type: 3}
-  pixelHudScale: 1.5
+  pixelHudTmpFont: {fileID: 11400000, guid: 9500d1c85a014fa6beca751803ea6fe9, type: 2}
+  pixelHudScale: 1
   pixelHudPanelColor: {r: 0.04, g: 0.1, b: 0.2, a: 0.82}
   pixelHudBorderColor: {r: 0.38, g: 0.58, b: 0.9, a: 1}
   pixelHudHealthColor: {r: 0.35, g: 1, b: 0.52, a: 1}
