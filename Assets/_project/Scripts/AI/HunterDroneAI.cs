@@ -41,6 +41,13 @@ namespace EclipseProtocol.AI
         [SerializeField, Min(0.1f)] private float stalledRepathSeconds = 0.5f;
         [SerializeField, Min(0.01f)] private float lungeObstaclePadding = 0.08f;
         [SerializeField] private LayerMask lungeObstacleMask = ~0;
+        [Header("Visuals")]
+        [SerializeField] private GameObject visualPrefab;
+        [SerializeField] private Vector3 visualLocalPosition = Vector3.zero;
+        [SerializeField] private Vector3 visualLocalEulerAngles = Vector3.zero;
+        [SerializeField] private Vector3 visualLocalScale = Vector3.one;
+        [SerializeField] private bool forceVisualRenderersVisible = true;
+        [SerializeField] private bool centerVisualBoundsOnRoot = true;
 
         private EnemyContactDamage _contactDamage;
         private HunterState _state = HunterState.Idle;
@@ -53,6 +60,7 @@ namespace EclipseProtocol.AI
         private float _stalledRepathTimer;
         private float _nextAttackTime;
         private int _patrolIndex;
+        private GameObject _visualInstance;
 
         public string CurrentStateName => _state.ToString();
 
@@ -99,6 +107,7 @@ namespace EclipseProtocol.AI
             _contactDamage = GetComponent<EnemyContactDamage>();
             _contactDamage.SetDamageEnabled(false);
             _homePosition = transform.position;
+            ConfigureVisual();
 
             if (stateRenderer == null)
             {
@@ -115,6 +124,98 @@ namespace EclipseProtocol.AI
             }
 
             ApplyAgentSettings();
+        }
+
+        private void ConfigureVisual()
+        {
+            if (visualPrefab == null || _visualInstance != null)
+            {
+                return;
+            }
+
+            _visualInstance = CreateVisualInstance();
+            SetLayerRecursively(_visualInstance, gameObject.layer);
+
+            if (forceVisualRenderersVisible)
+            {
+                ShowVisualHierarchy(_visualInstance);
+            }
+
+            Renderer[] visualRenderers = _visualInstance.GetComponentsInChildren<Renderer>(true);
+            if (visualRenderers.Length == 0)
+            {
+                return;
+            }
+
+            if (forceVisualRenderersVisible)
+            {
+                EnableRenderers(visualRenderers);
+            }
+
+            if (centerVisualBoundsOnRoot)
+            {
+                CenterVisualBoundsOnRoot(_visualInstance.transform, visualRenderers);
+            }
+        }
+
+        private GameObject CreateVisualInstance()
+        {
+            GameObject instance = Instantiate(visualPrefab, transform);
+            instance.name = visualPrefab.name;
+            ApplyVisualTransform(instance.transform);
+            return instance;
+        }
+
+        private void ApplyVisualTransform(Transform visualTransform)
+        {
+            visualTransform.localPosition = visualLocalPosition;
+            visualTransform.localRotation = Quaternion.Euler(visualLocalEulerAngles);
+            visualTransform.localScale = visualLocalScale;
+        }
+
+        private void CenterVisualBoundsOnRoot(Transform visualTransform, Renderer[] visualRenderers)
+        {
+            Bounds bounds = CalculateRendererBounds(visualRenderers);
+            visualTransform.position += transform.position - bounds.center;
+        }
+
+        private static void EnableRenderers(Renderer[] renderers)
+        {
+            for (int i = 0; i < renderers.Length; i++)
+            {
+                renderers[i].enabled = true;
+            }
+        }
+
+        private static void SetLayerRecursively(GameObject targetObject, int layer)
+        {
+            targetObject.layer = layer;
+            Transform targetTransform = targetObject.transform;
+            for (int i = 0; i < targetTransform.childCount; i++)
+            {
+                SetLayerRecursively(targetTransform.GetChild(i).gameObject, layer);
+            }
+        }
+
+        private static void ShowVisualHierarchy(GameObject targetObject)
+        {
+            targetObject.SetActive(true);
+            Transform targetTransform = targetObject.transform;
+            for (int i = 0; i < targetTransform.childCount; i++)
+            {
+                ShowVisualHierarchy(targetTransform.GetChild(i).gameObject);
+            }
+        }
+
+        private static Bounds CalculateRendererBounds(Renderer[] renderers)
+        {
+            Bounds bounds = renderers[0].bounds;
+            for (int i = 1; i < renderers.Length; i++)
+            {
+                bounds.Encapsulate(renderers[i].bounds);
+            }
+
+            return bounds;
         }
 
         private void Start()
