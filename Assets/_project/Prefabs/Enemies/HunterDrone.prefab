@@ -147,6 +147,8 @@ MonoBehaviour:
   visualLocalScale: {x: 1, y: 1, z: 1}
   forceVisualRenderersVisible: 1
   centerVisualBoundsOnRoot: 1
+  addVisualMeshColliders: 1
+  visualMeshCollidersConvex: 1
 --- !u!114 &2579277039285064961
 MonoBehaviour:
   m_ObjectHideFlags: 0

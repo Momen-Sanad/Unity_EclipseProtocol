@@ -26,6 +26,8 @@ namespace EclipseProtocol.AI
         [SerializeField] private Vector3 visualLocalScale = Vector3.one;
         [SerializeField] private bool forceVisualRenderersVisible = true;
         [SerializeField] private bool centerVisualBoundsOnRoot = true;
+        [SerializeField] private bool addVisualMeshColliders = true;
+        [SerializeField] private bool visualMeshCollidersConvex = true;
 
         private int _currentWaypointIndex;
         private float _stuckTimer;
@@ -163,6 +165,11 @@ namespace EclipseProtocol.AI
             {
                 CenterVisualBoundsOnRoot(_visualInstance.transform, visualRenderers);
             }
+
+            if (addVisualMeshColliders)
+            {
+                AddVisualMeshColliders(_visualInstance);
+            }
         }
 
         private GameObject CreateVisualInstance()
@@ -223,6 +230,28 @@ namespace EclipseProtocol.AI
             }
 
             return bounds;
+        }
+
+        private void AddVisualMeshColliders(GameObject visualRoot)
+        {
+            MeshFilter[] meshFilters = visualRoot.GetComponentsInChildren<MeshFilter>(true);
+            for (int i = 0; i < meshFilters.Length; i++)
+            {
+                MeshFilter meshFilter = meshFilters[i];
+                if (meshFilter.sharedMesh == null)
+                {
+                    continue;
+                }
+
+                MeshCollider meshCollider = meshFilter.GetComponent<MeshCollider>();
+                if (meshCollider == null)
+                {
+                    meshCollider = meshFilter.gameObject.AddComponent<MeshCollider>();
+                }
+
+                meshCollider.sharedMesh = meshFilter.sharedMesh;
+                meshCollider.convex = visualMeshCollidersConvex;
+            }
         }
 
         private void RecoverIfStuck()
