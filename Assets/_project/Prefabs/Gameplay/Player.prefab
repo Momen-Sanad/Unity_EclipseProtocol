@@ -159,8 +159,5 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0dcf5c3cf66e4550a153b2f3295f4659, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EclipseProtocol.Player.PlayerDamageFeedback
-  hitStopDuration: 0.08
-  hitStopTimeScale: 0.03
-  flashDuration: 0.14
-  flashColor: {r: 1, g: 1, b: 1, a: 1}
-  flashEmissionColor: {r: 1, g: 0.18, b: 0.08, a: 1}
+  flashDuration: 1
+  flashInterval: 0.12

@@ -7,45 +7,20 @@ namespace EclipseProtocol.Player
     [RequireComponent(typeof(PlayerController))]
     public class PlayerDamageFeedback : MonoBehaviour
     {
-        private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
-        private static readonly int ColorId = Shader.PropertyToID("_Color");
-        private static readonly int EmissionColorId = Shader.PropertyToID("_EmissionColor");
-
-        [Header("Hit Stop")]
-        [SerializeField, Min(0f)] private float hitStopDuration = 0.08f;
-        [SerializeField, Range(0f, 1f)] private float hitStopTimeScale = 0.03f;
-
         [Header("Flash")]
-        [SerializeField, Min(0f)] private float flashDuration = 0.14f;
-        [SerializeField] private Color flashColor = Color.white;
-        [SerializeField] private Color flashEmissionColor = new Color(1f, 0.18f, 0.08f, 1f);
+        [SerializeField, Min(0f)] private float flashDuration = 1f;
+        [SerializeField, Min(0.01f)] private float flashInterval = 0.12f;
 
         private PlayerController _playerController;
         private Renderer[] _renderers;
-        private MaterialPropertyBlock[] _propertyBlocks;
-        private Color[] _baseColors;
-        private Color[] _emissionColors;
-        private Coroutine _hitStopRoutine;
+        private bool[] _rendererEnabledStates;
         private Coroutine _flashRoutine;
-        private float _defaultFixedDeltaTime;
-        private float _timeScaleBeforeHitStop = 1f;
 
         private void Awake()
         {
             _playerController = GetComponent<PlayerController>();
-            _renderers = GetComponentsInChildren<Renderer>();
-            _propertyBlocks = new MaterialPropertyBlock[_renderers.Length];
-            _baseColors = new Color[_renderers.Length];
-            _emissionColors = new Color[_renderers.Length];
-            _defaultFixedDeltaTime = Time.fixedDeltaTime;
 
-            for (int i = 0; i < _renderers.Length; i++)
-            {
-                _propertyBlocks[i] = new MaterialPropertyBlock();
-                Material sharedMaterial = _renderers[i].sharedMaterial;
-                _baseColors[i] = GetMaterialColor(sharedMaterial, BaseColorId, ColorId, Color.white);
-                _emissionColors[i] = GetMaterialColor(sharedMaterial, EmissionColorId, 0, Color.black);
-            }
+            RefreshRendererCache();
         }
 
         private void OnEnable()
@@ -68,54 +43,23 @@ namespace EclipseProtocol.Player
                 _playerController.DamageTaken -= HandleDamageTaken;
             }
 
-            StopFeedback();
+            StopFlash();
         }
 
         private void OnDestroy()
         {
-            StopFeedback();
+            StopFlash();
         }
 
         private void HandleDamageTaken(float healthLost)
         {
-            StartHitStop();
             StartFlash();
-        }
-
-        private void StartHitStop()
-        {
-            if (hitStopDuration <= 0f)
-            {
-                return;
-            }
-
-            if (_hitStopRoutine != null)
-            {
-                StopCoroutine(_hitStopRoutine);
-                RestoreTimeScale();
-            }
-
-            _timeScaleBeforeHitStop = Time.timeScale;
-            Time.timeScale = Mathf.Min(Time.timeScale, hitStopTimeScale);
-            Time.fixedDeltaTime = _defaultFixedDeltaTime * Time.timeScale;
-            _hitStopRoutine = StartCoroutine(HitStopRoutine());
-        }
-
-        private IEnumerator HitStopRoutine()
-        {
-            yield return new WaitForSecondsRealtime(hitStopDuration);
-            RestoreTimeScale();
-        }
-
-        private void RestoreTimeScale()
-        {
-            Time.timeScale = _timeScaleBeforeHitStop;
-            Time.fixedDeltaTime = _defaultFixedDeltaTime * Time.timeScale;
-            _hitStopRoutine = null;
         }
 
         private void StartFlash()
         {
+            RefreshRendererCache();
+
             if (flashDuration <= 0f || _renderers.Length == 0)
             {
                 return;
@@ -124,7 +68,7 @@ namespace EclipseProtocol.Player
             if (_flashRoutine != null)
             {
                 StopCoroutine(_flashRoutine);
-                RestoreRendererColors();
+                RestoreRendererVisibility();
             }
 
             _flashRoutine = StartCoroutine(FlashRoutine());
@@ -132,29 +76,42 @@ namespace EclipseProtocol.Player
 
         private IEnumerator FlashRoutine()
         {
-            SetRendererColors(flashColor, flashEmissionColor);
-            yield return new WaitForSecondsRealtime(flashDuration);
-            RestoreRendererColors();
+            float endTime = Time.realtimeSinceStartup + flashDuration;
+            bool flashOn = false;
+
+            while (Time.realtimeSinceStartup < endTime)
+            {
+                flashOn = !flashOn;
+                SetRendererVisibility(flashOn);
+                yield return new WaitForSecondsRealtime(flashInterval);
+            }
+
+            RestoreRendererVisibility();
             _flashRoutine = null;
         }
 
-        private void StopFeedback()
+        private void StopFlash()
         {
-            if (_hitStopRoutine != null)
-            {
-                StopCoroutine(_hitStopRoutine);
-                RestoreTimeScale();
-            }
-
             if (_flashRoutine != null)
             {
                 StopCoroutine(_flashRoutine);
-                RestoreRendererColors();
+                RestoreRendererVisibility();
                 _flashRoutine = null;
             }
         }
 
-        private void SetRendererColors(Color baseColor, Color emissionColor)
+        private void RefreshRendererCache()
+        {
+            _renderers = GetComponentsInChildren<Renderer>(true);
+            _rendererEnabledStates = new bool[_renderers.Length];
+
+            for (int i = 0; i < _renderers.Length; i++)
+            {
+                _rendererEnabledStates[i] = _renderers[i] != null && _renderers[i].enabled;
+            }
+        }
+
+        private void SetRendererVisibility(bool visible)
         {
             for (int i = 0; i < _renderers.Length; i++)
             {
@@ -164,16 +121,11 @@ namespace EclipseProtocol.Player
                     continue;
                 }
 
-                MaterialPropertyBlock propertyBlock = _propertyBlocks[i];
-                targetRenderer.GetPropertyBlock(propertyBlock);
-                propertyBlock.SetColor(BaseColorId, baseColor);
-                propertyBlock.SetColor(ColorId, baseColor);
-                propertyBlock.SetColor(EmissionColorId, emissionColor);
-                targetRenderer.SetPropertyBlock(propertyBlock);
+                targetRenderer.enabled = visible && _rendererEnabledStates[i];
             }
         }
 
-        private void RestoreRendererColors()
+        private void RestoreRendererVisibility()
         {
             for (int i = 0; i < _renderers.Length; i++)
             {
@@ -183,28 +135,8 @@ namespace EclipseProtocol.Player
                     continue;
                 }
 
-                MaterialPropertyBlock propertyBlock = _propertyBlocks[i];
-                targetRenderer.GetPropertyBlock(propertyBlock);
-                propertyBlock.SetColor(BaseColorId, _baseColors[i]);
-                propertyBlock.SetColor(ColorId, _baseColors[i]);
-                propertyBlock.SetColor(EmissionColorId, _emissionColors[i]);
-                targetRenderer.SetPropertyBlock(propertyBlock);
+                targetRenderer.enabled = _rendererEnabledStates[i];
             }
-        }
-
-        private static Color GetMaterialColor(Material material, int preferredId, int fallbackId, Color fallback)
-        {
-            if (material == null)
-            {
-                return fallback;
-            }
-
-            if (material.HasProperty(preferredId))
-            {
-                return material.GetColor(preferredId);
-            }
-
-            return fallbackId != 0 && material.HasProperty(fallbackId) ? material.GetColor(fallbackId) : fallback;
         }
     }
 }
