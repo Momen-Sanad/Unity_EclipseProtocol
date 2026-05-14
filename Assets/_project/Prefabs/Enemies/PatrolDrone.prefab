@@ -84,7 +84,7 @@ Rigidbody:
   m_IsKinematic: 1
   m_Interpolate: 0
   m_Constraints: 0
-  m_CollisionDetection: 0
+  m_CollisionDetection: 3
 --- !u!195 &448461685422798716
 NavMeshAgent:
   m_ObjectHideFlags: 0
@@ -142,6 +142,8 @@ MonoBehaviour:
   centerVisualBoundsOnRoot: 1
   addVisualMeshColliders: 1
   visualMeshCollidersConvex: 1
+  fitRootBoxColliderToVisual: 1
+  rootColliderPadding: 0.15
 --- !u!114 &6258596697547217273
 MonoBehaviour:
   m_ObjectHideFlags: 0

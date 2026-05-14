@@ -28,6 +28,8 @@ namespace EclipseProtocol.AI
         [SerializeField] private bool centerVisualBoundsOnRoot = true;
         [SerializeField] private bool addVisualMeshColliders = true;
         [SerializeField] private bool visualMeshCollidersConvex = true;
+        [SerializeField] private bool fitRootBoxColliderToVisual = true;
+        [SerializeField, Min(0f)] private float rootColliderPadding = 0.15f;
 
         private int _currentWaypointIndex;
         private float _stuckTimer;
@@ -83,6 +85,7 @@ namespace EclipseProtocol.AI
             }
 
             _homePosition = transform.position;
+            ConfigureRigidbodyCollision();
             ConfigureVisual();
         }
 
@@ -135,6 +138,18 @@ namespace EclipseProtocol.AI
             navMeshAgent.avoidancePriority = 30 + Mathf.Abs(GetInstanceID()) % 40;
         }
 
+        private void ConfigureRigidbodyCollision()
+        {
+            Rigidbody body = GetComponent<Rigidbody>();
+            if (body == null)
+            {
+                return;
+            }
+
+            body.isKinematic = true;
+            body.collisionDetectionMode = CollisionDetectionMode.ContinuousSpeculative;
+        }
+
         private void ConfigureVisual()
         {
             if (visualPrefab == null || _visualInstance != null)
@@ -164,6 +179,11 @@ namespace EclipseProtocol.AI
             if (centerVisualBoundsOnRoot)
             {
                 CenterVisualBoundsOnRoot(_visualInstance.transform, visualRenderers);
+            }
+
+            if (fitRootBoxColliderToVisual)
+            {
+                FitRootBoxColliderToVisual(visualRenderers);
             }
 
             if (addVisualMeshColliders)
@@ -252,6 +272,44 @@ namespace EclipseProtocol.AI
                 meshCollider.sharedMesh = meshFilter.sharedMesh;
                 meshCollider.convex = visualMeshCollidersConvex;
             }
+
+            SkinnedMeshRenderer[] skinnedMeshRenderers = visualRoot.GetComponentsInChildren<SkinnedMeshRenderer>(true);
+            for (int i = 0; i < skinnedMeshRenderers.Length; i++)
+            {
+                SkinnedMeshRenderer skinnedMeshRenderer = skinnedMeshRenderers[i];
+                if (skinnedMeshRenderer.sharedMesh == null)
+                {
+                    continue;
+                }
+
+                MeshCollider meshCollider = skinnedMeshRenderer.GetComponent<MeshCollider>();
+                if (meshCollider == null)
+                {
+                    meshCollider = skinnedMeshRenderer.gameObject.AddComponent<MeshCollider>();
+                }
+
+                meshCollider.sharedMesh = skinnedMeshRenderer.sharedMesh;
+                meshCollider.convex = visualMeshCollidersConvex;
+            }
+        }
+
+        private void FitRootBoxColliderToVisual(Renderer[] visualRenderers)
+        {
+            BoxCollider rootBoxCollider = GetComponent<BoxCollider>();
+            if (rootBoxCollider == null || visualRenderers == null || visualRenderers.Length == 0)
+            {
+                return;
+            }
+
+            Bounds bounds = CalculateRendererBounds(visualRenderers);
+            Vector3 localMin = transform.InverseTransformPoint(bounds.min);
+            Vector3 localMax = transform.InverseTransformPoint(bounds.max);
+            Vector3 size = localMax - localMin;
+            rootBoxCollider.center = (localMin + localMax) * 0.5f;
+            rootBoxCollider.size = new Vector3(
+                Mathf.Max(0.1f, Mathf.Abs(size.x) + rootColliderPadding),
+                Mathf.Max(0.1f, Mathf.Abs(size.y) + rootColliderPadding),
+                Mathf.Max(0.1f, Mathf.Abs(size.z) + rootColliderPadding));
         }
 
         private void RecoverIfStuck()
