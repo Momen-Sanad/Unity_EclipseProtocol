@@ -10,6 +10,8 @@ namespace EclipseProtocol.Player
         [SerializeField] private string robotResourcePath = "Player/low_poly_animated_robot";
         [SerializeField, Min(0.01f)] private float targetHeight = 2.4f;
         [SerializeField] private Vector3 localEulerAngles;
+        [SerializeField] private bool faceMoveDirection = true;
+        [SerializeField, Min(0f)] private float turnSpeed = 14f;
         [SerializeField] private string idleAnimationName = "standing";
         [SerializeField] private string walkingAnimationName = "walking";
 
@@ -39,6 +41,7 @@ namespace EclipseProtocol.Player
             AnimationClip targetClip = shouldWalk ? _walkingClip : _idleClip;
             string targetName = shouldWalk ? walkingAnimationName : idleAnimationName;
             PlayAnimation(targetClip, targetName);
+            UpdateFacingDirection();
             RestartLoopIfNeeded();
         }
 
@@ -89,6 +92,34 @@ namespace EclipseProtocol.Player
             ScaleAndGroundVisual();
             SetLayerRecursively(_visualInstance, gameObject.layer);
             SetupAnimation();
+        }
+
+        private void UpdateFacingDirection()
+        {
+            if (!faceMoveDirection || _visualInstance == null || !_playerController.HasMoveInput)
+            {
+                return;
+            }
+
+            Vector3 worldDirection = _playerController.FacingDirection;
+            if (worldDirection.sqrMagnitude <= 0.001f)
+            {
+                return;
+            }
+
+            Vector3 localDirection = transform.InverseTransformDirection(worldDirection.normalized);
+            localDirection.y = 0f;
+            if (localDirection.sqrMagnitude <= 0.001f)
+            {
+                return;
+            }
+
+            Quaternion targetRotation = Quaternion.LookRotation(localDirection.normalized, Vector3.up)
+                * Quaternion.Euler(localEulerAngles);
+            _visualInstance.transform.localRotation = Quaternion.Slerp(
+                _visualInstance.transform.localRotation,
+                targetRotation,
+                1f - Mathf.Exp(-turnSpeed * Time.deltaTime));
         }
 
         private void ScaleAndGroundVisual()

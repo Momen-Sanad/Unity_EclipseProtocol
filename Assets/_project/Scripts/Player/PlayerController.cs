@@ -49,6 +49,9 @@ namespace EclipseProtocol.Player
         public float DashCooldownDuration => balanceData != null ? balanceData.dashCooldown : 8f;
         public bool IsDashing => _isDashing;
         public bool HasMoveInput => _moveInput.sqrMagnitude > 0.01f || _isDashing;
+        public Vector3 FacingDirection => _lastNonZeroMoveDirection.sqrMagnitude > 0.001f
+            ? _lastNonZeroMoveDirection.normalized
+            : transform.forward;
         public bool IsGrounded { get; private set; }
         public bool IsInvulnerable { get; private set; }
 

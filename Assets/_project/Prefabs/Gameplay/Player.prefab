@@ -120,6 +120,8 @@ MonoBehaviour:
   robotResourcePath: Player/low_poly_animated_robot
   targetHeight: 2.4
   localEulerAngles: {x: 0, y: 0, z: 0}
+  faceMoveDirection: 1
+  turnSpeed: 14
   idleAnimationName: standing
   walkingAnimationName: walking
 --- !u!114 &7703796674891034521
