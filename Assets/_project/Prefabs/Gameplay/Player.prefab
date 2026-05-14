@@ -9,13 +9,11 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 8631382775168334146}
-  - component: {fileID: 6571396874834292094}
   - component: {fileID: 2576811218750430837}
-  - component: {fileID: 7778358534239318077}
   - component: {fileID: 3342599570299064534}
   - component: {fileID: 1709142106429520610}
+  - component: {fileID: 5827074721238859301}
   - component: {fileID: 7703796674891034521}
-  - component: {fileID: 6849312905761384421}
   m_Layer: 8
   m_Name: Player
   m_TagString: Untagged
@@ -38,14 +36,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!33 &6571396874834292094
-MeshFilter:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5158521581382280103}
-  m_Mesh: {fileID: 10208, guid: 0000000000000000e000000000000000, type: 0}
 --- !u!136 &2576811218750430837
 CapsuleCollider:
   m_ObjectHideFlags: 0
@@ -69,55 +59,6 @@ CapsuleCollider:
   m_Height: 2
   m_Direction: 1
   m_Center: {x: 0, y: 0, z: 0}
---- !u!23 &7778358534239318077
-MeshRenderer:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5158521581382280103}
-  m_Enabled: 1
-  m_CastShadows: 1
-  m_ReceiveShadows: 1
-  m_DynamicOccludee: 1
-  m_StaticShadowCaster: 0
-  m_MotionVectors: 1
-  m_LightProbeUsage: 1
-  m_ReflectionProbeUsage: 1
-  m_RayTracingMode: 2
-  m_RayTraceProcedural: 0
-  m_RayTracingAccelStructBuildFlagsOverride: 0
-  m_RayTracingAccelStructBuildFlags: 1
-  m_SmallMeshCulling: 1
-  m_ForceMeshLod: -1
-  m_MeshLodSelectionBias: 0
-  m_RenderingLayerMask: 1
-  m_RendererPriority: 0
-  m_Materials:
-  - {fileID: 2100000, guid: 31321ba15b8f8eb4c954353edc038b1d, type: 2}
-  m_StaticBatchInfo:
-    firstSubMesh: 0
-    subMeshCount: 0
-  m_StaticBatchRoot: {fileID: 0}
-  m_ProbeAnchor: {fileID: 0}
-  m_LightProbeVolumeOverride: {fileID: 0}
-  m_ScaleInLightmap: 1
-  m_ReceiveGI: 1
-  m_PreserveUVs: 1
-  m_IgnoreNormalsForChartDetection: 0
-  m_ImportantGI: 0
-  m_StitchLightmapSeams: 1
-  m_SelectedEditorRenderState: 3
-  m_MinimumChartSize: 4
-  m_AutoUVMaxDistance: 0.5
-  m_AutoUVMaxAngle: 89
-  m_LightmapParameters: {fileID: 0}
-  m_GlobalIlluminationMeshLod: 0
-  m_SortingLayerID: 0
-  m_SortingLayer: 0
-  m_SortingOrder: 0
-  m_MaskInteraction: 0
-  m_AdditionalVertexStreams: {fileID: 0}
 --- !u!54 &3342599570299064534
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -155,7 +96,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: bd023f160ecec2a4289eefb99b966240, type: 3}
-  m_Name: 
+  m_Name:
   m_EditorClassIdentifier: Assembly-CSharp::EclipseProtocol.Player.PlayerController
   balanceData: {fileID: 11400000, guid: 5a9c28b5910f1f14293f83b87a687f7c, type: 2}
   playerRigidbody: {fileID: 3342599570299064534}
@@ -164,6 +105,21 @@ MonoBehaviour:
   enemyLayerName: Enemy
   useNoStickCollision: 1
   noStickPhysicsMaterial: {fileID: 0}
+--- !u!114 &5827074721238859301
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5158521581382280103}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2539cdb25da5491f9f61d4c8f5c7d9de, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::EclipseProtocol.Player.PlayerVisualLoader
+  robotResourcePath: Player/low_poly_animated_robot
+  targetHeight: 2.4
+  localEulerAngles: {x: 0, y: 0, z: 0}
 --- !u!114 &7703796674891034521
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -181,19 +137,3 @@ MonoBehaviour:
   flashDuration: 0.14
   flashColor: {r: 1, g: 1, b: 1, a: 1}
   flashEmissionColor: {r: 1, g: 0.18, b: 0.08, a: 1}
---- !u!114 &6849312905761384421
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5158521581382280103}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 9bb9fa2f91c04c4b9bdadfe8e124f6b2, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::EclipseProtocol.UI.PlayerHealthbarAttachment
-  healthbarPrefab: {fileID: 5316046413323435985, guid: 351baf954590df348a71254a311227b1, type: 3}
-  localOffset: {x: 0, y: 1.35, z: 0}
-  localEulerAngles: {x: 60, y: 0, z: 0}
-  localScale: {x: 1, y: 1, z: 1}
