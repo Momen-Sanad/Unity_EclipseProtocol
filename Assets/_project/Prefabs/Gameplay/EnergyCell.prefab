@@ -70,7 +70,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::EclipseProtocol.World.EnergyCellPickup
   balanceData: {fileID: 11400000, guid: 5a9c28b5910f1f14293f83b87a687f7c, type: 2}
   energyRestoreAmount: 25
-  visualPrefab: {fileID: 0}
+  visualPrefab: {fileID: -1027065302040520663, guid: c257acbc9557f04418e6862f70fb238d, type: 3}
   visualAssetPath: Assets/_project/Prefabs/Gameplay/Energy Cell/Power cell.glb
   visualLocalPosition: {x: 0, y: 0, z: 0}
   visualLocalEulerAngles: {x: 0, y: 0, z: 0}

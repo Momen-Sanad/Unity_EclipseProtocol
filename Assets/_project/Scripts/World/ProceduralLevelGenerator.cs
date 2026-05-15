@@ -86,7 +86,7 @@ namespace EclipseProtocol.World
 
         [Header("Exploration Blackout")]
         [SerializeField] private Material roomBlackoutMaterial;
-        [SerializeField, Min(0f)] private float blackoutOverlayHeight = 2.2f;
+        [SerializeField, Min(0f)] private float blackoutOverlayHeight = 20f;
         [SerializeField, Min(0f)] private float blackoutRevealPadding = 0.25f;
         [SerializeField, Min(1f)] private float blackoutOverlayMargin = 48f;
 
@@ -98,6 +98,12 @@ namespace EclipseProtocol.World
         private System.Random _rng;
         private PlayerController _player;
         private RoomExplorationBlackoutController _blackoutController;
+        private Material _floorMaterial;
+        private Material _wallMaterial;
+        private Material _obstacleMaterial;
+        private Material _sealedDoorMaterial;
+        private Material _lockedDoorMaterial;
+        private Material _guideLineMaterial;
         private int _enemyCount;
         private int _hunterCount;
         private int _energyCellCount;
@@ -749,19 +755,24 @@ namespace EclipseProtocol.World
         {
             if (energyCellPrefab == null)
             {
+                Debug.LogWarning($"[ProceduralLevelGenerator] Cannot spawn energy cells in room {room.Index + 1}: prefab is missing.", this);
                 return 0;
             }
 
+            Debug.Log($"[ProceduralLevelGenerator] Spawning {count} energy cell(s) in room {room.Index + 1} center={room.Center} size={room.Width:0.0}x{room.Depth:0.0}.", this);
             int placedCount = 0;
             for (int i = 0; i < count; i++)
             {
                 if (!TryGetOpenRoomPosition(room, 2.2f, room.ReservedPositions, out Vector3 position))
                 {
+                    Debug.LogWarning($"[ProceduralLevelGenerator] Failed to place energy cell {i + 1}/{count} in room {room.Index + 1}.", this);
                     continue;
                 }
 
                 position.y = 0.75f;
-                Instantiate(energyCellPrefab, position, Quaternion.identity, levelRoot);
+                EnergyCellPickup energyCell = Instantiate(energyCellPrefab, position, Quaternion.identity, levelRoot);
+                energyCell.name = $"EnergyCell_R{room.Index + 1:00}_{i + 1:00}";
+                Debug.Log($"[ProceduralLevelGenerator] Spawned {energyCell.name} at world={position}.", energyCell);
                 room.ReservedPositions.Add(position);
                 _energyCellCount++;
                 placedCount++;
@@ -774,23 +785,35 @@ namespace EclipseProtocol.World
         {
             if (repairNodePrefab == null)
             {
+                Debug.LogWarning($"[ProceduralLevelGenerator] Cannot spawn power nodes in room {room.Index + 1}: prefab is missing.", this);
                 return 0;
             }
 
+            Debug.Log($"[ProceduralLevelGenerator] Spawning {count} power node(s) in room {room.Index + 1} center={room.Center} size={room.Width:0.0}x{room.Depth:0.0}.", this);
             int placedCount = 0;
             for (int i = 0; i < count; i++)
             {
                 if (!TryGetOpenRoomPosition(room, 2.8f, room.ReservedPositions, out Vector3 position))
                 {
+                    Debug.LogWarning($"[ProceduralLevelGenerator] Failed to place power node {i + 1}/{count} in room {room.Index + 1}.", this);
                     continue;
                 }
 
                 position.y = 2.0f;
-                
-                RepairNode repairNode = Instantiate(repairNodePrefab, position, Quaternion.identity, levelRoot);
+
+                RepairNode repairNode = Instantiate(
+                    repairNodePrefab,
+                    position,
+                    Quaternion.identity,
+                    room.Root.transform
+                );
+
                 repairNode.name = $"PowerNode_R{room.Index + 1:00}_{i + 1:00}";
+                Debug.Log($"[ProceduralLevelGenerator] Spawned {repairNode.name} at world={position}.", repairNode);
+
                 repairNode.Configure(balanceData, room.ForwardDoor);
                 GameStateManager.Instance?.RegisterRepairNode(repairNode);
+
                 room.ReservedPositions.Add(position);
                 _repairNodeCount++;
                 placedCount++;
@@ -1042,7 +1065,7 @@ namespace EclipseProtocol.World
             return "none";
         }
 
-        private static void Tint(GameObject target, Color color)
+        private void Tint(GameObject target, Color color)
         {
             Renderer renderer = target.GetComponent<Renderer>();
             if (renderer == null)
@@ -1050,11 +1073,117 @@ namespace EclipseProtocol.World
                 return;
             }
 
+            renderer.sharedMaterial = GetRuntimeMaterial(color);
+
             MaterialPropertyBlock propertyBlock = new MaterialPropertyBlock();
             renderer.GetPropertyBlock(propertyBlock);
             propertyBlock.SetColor("_BaseColor", color);
             propertyBlock.SetColor("_Color", color);
             renderer.SetPropertyBlock(propertyBlock);
+        }
+
+        private Material GetRuntimeMaterial(Color color)
+        {
+            if (Approximately(color, floorColor))
+            {
+                return _floorMaterial ??= CreateRuntimeMaterial("Generated Floor Material", floorColor);
+            }
+
+            if (Approximately(color, wallColor))
+            {
+                return _wallMaterial ??= CreateRuntimeMaterial("Generated Wall Material", wallColor);
+            }
+
+            if (Approximately(color, obstacleColor))
+            {
+                return _obstacleMaterial ??= CreateRuntimeMaterial("Generated Obstacle Material", obstacleColor);
+            }
+
+            if (Approximately(color, sealedDoorColor))
+            {
+                return _sealedDoorMaterial ??= CreateRuntimeMaterial("Generated Sealed Door Material", sealedDoorColor);
+            }
+
+            if (Approximately(color, lockedDoorColor))
+            {
+                return _lockedDoorMaterial ??= CreateRuntimeMaterial("Generated Locked Door Material", lockedDoorColor);
+            }
+
+            if (Approximately(color, guideLineColor))
+            {
+                return _guideLineMaterial ??= CreateRuntimeMaterial("Generated Guide Line Material", guideLineColor);
+            }
+
+            return CreateRuntimeMaterial("Generated Runtime Material", color);
+        }
+
+        private static Material CreateRuntimeMaterial(string name, Color color)
+        {
+            Material sourceMaterial = Resources.Load<Material>("RuntimeSolidColor");
+            if (sourceMaterial != null)
+            {
+                Material materialInstance = new Material(sourceMaterial)
+                {
+                    name = name
+                };
+                ApplyMaterialColor(materialInstance, color);
+                return materialInstance;
+            }
+
+            Shader shader = Shader.Find("Eclipse Protocol/Runtime Solid Color");
+            if (shader == null)
+            {
+                shader = Shader.Find("Universal Render Pipeline/Unlit");
+            }
+            if (shader == null)
+            {
+                shader = Shader.Find("Unlit/Color");
+            }
+            if (shader == null)
+            {
+                shader = Shader.Find("Sprites/Default");
+            }
+            if (shader == null)
+            {
+                shader = Shader.Find("Universal Render Pipeline/Lit");
+            }
+            if (shader == null)
+            {
+                shader = Shader.Find("Standard");
+            }
+
+            Material material = shader != null
+                ? new Material(shader)
+                : new Material(Shader.Find("Hidden/InternalErrorShader"));
+
+            material.name = name;
+            ApplyMaterialColor(material, color);
+            return material;
+        }
+
+        private static void ApplyMaterialColor(Material material, Color color)
+        {
+            if (material == null)
+            {
+                return;
+            }
+
+            if (material.HasProperty("_BaseColor"))
+            {
+                material.SetColor("_BaseColor", color);
+            }
+            if (material.HasProperty("_Color"))
+            {
+                material.SetColor("_Color", color);
+            }
+        }
+
+        private static bool Approximately(Color a, Color b)
+        {
+            return Mathf.Approximately(a.r, b.r)
+                && Mathf.Approximately(a.g, b.g)
+                && Mathf.Approximately(a.b, b.b)
+                && Mathf.Approximately(a.a, b.a);
         }
 
         private sealed class GeneratedRoom

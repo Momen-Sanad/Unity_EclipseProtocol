@@ -65,7 +65,7 @@ MonoBehaviour:
   repairIndicatorActiveColor: {r: 0.1, g: 1, b: 0.35, a: 1}
   blockEnemyNavigation: 1
   navigationBlockerSize: {x: 1.6, y: 2, z: 1.6}
-  visualPrefab: {fileID: 0}
+  visualPrefab: {fileID: 8771091787928289351, guid: 85a03f7cb3a842988cb9f5aee37684ef, type: 3}
   visualAssetPath: Assets/_project/Prefabs/Gameplay/PowerNode/Generator-model.glb
   visualLocalPosition: {x: 0, y: 0, z: 0}
   visualLocalEulerAngles: {x: 0, y: 0, z: 0}

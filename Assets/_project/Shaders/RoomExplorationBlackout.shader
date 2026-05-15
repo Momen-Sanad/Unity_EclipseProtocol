@@ -38,11 +38,12 @@ Shader "Eclipse Protocol/Room Exploration Blackout"
                 float4 _BlackColor;
                 float _OverlayAlpha;
                 float _Feather;
-                int _RoomRectCount;
-                float4 _PlayAreaRect;
-                float4 _RoomRects[MAX_ROOM_RECTS];
-                float4 _RoomRevealAmounts[MAX_ROOM_RECTS];
             CBUFFER_END
+
+            float _RoomRectCount;
+            float4 _PlayAreaRect;
+            float4 _RoomRects[MAX_ROOM_RECTS];
+            float4 _RoomRevealAmounts[MAX_ROOM_RECTS];
 
             struct Attributes
             {
@@ -78,10 +79,10 @@ Shader "Eclipse Protocol/Room Exploration Blackout"
                 float playAreaMask = RectMask(worldXZ, _PlayAreaRect);
                 float revealedMask = 0.0;
 
-                [unroll]
+                UNITY_LOOP
                 for (int i = 0; i < MAX_ROOM_RECTS; i++)
                 {
-                    if (i >= _RoomRectCount)
+                    if (i >= (int)_RoomRectCount)
                     {
                         break;
                     }

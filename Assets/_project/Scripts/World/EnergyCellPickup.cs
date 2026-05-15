@@ -19,6 +19,9 @@ namespace EclipseProtocol.World
         [SerializeField] private bool centerVisualBoundsOnRoot = true;
 
         private GameObject _visualInstance;
+        private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
+        private static readonly int ColorId = Shader.PropertyToID("_Color");
+        private static readonly Color FallbackVisualColor = new Color(1f, 0.82f, 0.12f);
 
         public float EnergyRestoreAmount => energyRestoreAmount;
 
@@ -38,12 +41,18 @@ namespace EclipseProtocol.World
         private void ConfigureVisual()
         {
             GameObject resolvedVisualPrefab = ResolveVisualPrefab();
-            if (resolvedVisualPrefab == null || _visualInstance != null)
+            if (_visualInstance != null)
             {
+                Debug.Log($"[EnergyCellPickup] {name} already has visual instance '{_visualInstance.name}'.", this);
                 return;
             }
 
-            _visualInstance = CreateVisualInstance(resolvedVisualPrefab);
+            _visualInstance = resolvedVisualPrefab != null
+                ? CreateVisualInstance(resolvedVisualPrefab)
+                : CreateFallbackVisual();
+
+            Debug.Log($"[EnergyCellPickup] {name} visual source={(resolvedVisualPrefab != null ? "prefab" : "fallback")} prefab={(resolvedVisualPrefab != null ? resolvedVisualPrefab.name : "null")} path='{visualAssetPath}' root='{_visualInstance.name}' localPosition={_visualInstance.transform.localPosition} localScale={_visualInstance.transform.localScale}.", this);
+
             SetLayerRecursively(_visualInstance, gameObject.layer);
 
             if (forceVisualRenderersVisible)
@@ -52,8 +61,10 @@ namespace EclipseProtocol.World
             }
 
             Renderer[] visualRenderers = _visualInstance.GetComponentsInChildren<Renderer>(true);
+            Debug.Log($"[EnergyCellPickup] {name} visual renderer count={visualRenderers.Length}.", this);
             if (visualRenderers.Length == 0)
             {
+                Debug.LogWarning($"[EnergyCellPickup] {name} has no visual renderers after ConfigureVisual.", this);
                 return;
             }
 
@@ -66,6 +77,9 @@ namespace EclipseProtocol.World
             {
                 CenterVisualBoundsOnRoot(_visualInstance.transform, visualRenderers);
             }
+
+            Bounds finalBounds = CalculateRendererBounds(visualRenderers);
+            Debug.Log($"[EnergyCellPickup] {name} visual bounds center={finalBounds.center} size={finalBounds.size} active={_visualInstance.activeInHierarchy}.", this);
         }
 
         private GameObject ResolveVisualPrefab()
@@ -78,11 +92,41 @@ namespace EclipseProtocol.World
 #if UNITY_EDITOR
             if (!string.IsNullOrWhiteSpace(visualAssetPath))
             {
-                return UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(visualAssetPath);
+                GameObject editorVisual = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(visualAssetPath);
+                Debug.Log($"[EnergyCellPickup] Editor AssetDatabase lookup path='{visualAssetPath}' result={(editorVisual != null ? editorVisual.name : "null")}.", this);
+                return editorVisual;
             }
 #endif
 
             return null;
+        }
+
+        private GameObject CreateFallbackVisual()
+        {
+            GameObject visualRoot = new GameObject("EnergyCellFallbackVisual");
+            visualRoot.transform.SetParent(transform, false);
+            visualRoot.transform.localPosition = visualLocalPosition;
+            visualRoot.transform.localRotation = Quaternion.Euler(visualLocalEulerAngles);
+            visualRoot.transform.localScale = Vector3.one;
+
+            GameObject core = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            core.name = "EnergyCore";
+            core.transform.SetParent(visualRoot.transform, false);
+            core.transform.localPosition = Vector3.zero;
+            core.transform.localRotation = Quaternion.Euler(0f, 45f, 0f);
+            core.transform.localScale = new Vector3(0.65f, 0.65f, 0.65f);
+            ApplyFallbackMaterial(core.GetComponent<Renderer>(), FallbackVisualColor);
+            DisableCollider(core);
+
+            GameObject cap = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            cap.name = "EnergyGlow";
+            cap.transform.SetParent(visualRoot.transform, false);
+            cap.transform.localPosition = Vector3.zero;
+            cap.transform.localScale = new Vector3(0.9f, 0.9f, 0.9f);
+            ApplyFallbackMaterial(cap.GetComponent<Renderer>(), new Color(0.15f, 0.95f, 1f));
+            DisableCollider(cap);
+
+            return visualRoot;
         }
 
         private GameObject CreateVisualInstance(GameObject resolvedVisualPrefab)
@@ -143,6 +187,57 @@ namespace EclipseProtocol.World
             }
 
             return bounds;
+        }
+
+        private static void ApplyFallbackMaterial(Renderer renderer, Color color)
+        {
+            if (renderer == null)
+            {
+                return;
+            }
+
+            Material sourceMaterial = Resources.Load<Material>("RuntimeSolidColor");
+            Material material;
+            if (sourceMaterial != null)
+            {
+                material = new Material(sourceMaterial);
+            }
+            else
+            {
+                Shader shader = Shader.Find("Eclipse Protocol/Runtime Solid Color");
+                if (shader == null)
+                {
+                    shader = Shader.Find("Sprites/Default");
+                }
+
+                if (shader == null)
+                {
+                    return;
+                }
+
+                material = new Material(shader);
+            }
+
+            material.name = "Energy Cell Runtime Material";
+            if (material.HasProperty(BaseColorId))
+            {
+                material.SetColor(BaseColorId, color);
+            }
+            if (material.HasProperty(ColorId))
+            {
+                material.SetColor(ColorId, color);
+            }
+
+            renderer.sharedMaterial = material;
+        }
+
+        private static void DisableCollider(GameObject target)
+        {
+            Collider visualCollider = target.GetComponent<Collider>();
+            if (visualCollider != null)
+            {
+                visualCollider.enabled = false;
+            }
         }
 
         private void OnTriggerEnter(Collider other)

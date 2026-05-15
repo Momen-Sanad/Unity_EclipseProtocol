@@ -47,9 +47,14 @@ namespace EclipseProtocol.World
         private Renderer _repairIndicatorRenderer;
         private AudioSource _repairLoopSource;
         private GameObject _visualInstance;
+        private bool _usingFallbackVisual;
         private float _progressSeconds;
         private bool _promptShown;
         private static RepairNode _activeRepairNode;
+        private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
+        private static readonly int ColorId = Shader.PropertyToID("_Color");
+        private static readonly Color FallbackBodyColor = new Color(0.22f, 0.26f, 0.3f);
+        private static readonly Color FallbackCoreColor = new Color(0.1f, 0.95f, 1f);
 
         public bool IsRepaired { get; private set; }
         public float Progress01 => RepairSeconds <= 0f ? 1f : Mathf.Clamp01(_progressSeconds / RepairSeconds);
@@ -72,12 +77,18 @@ namespace EclipseProtocol.World
         private void ConfigureVisual()
         {
             GameObject resolvedVisualPrefab = ResolveVisualPrefab();
-            if (resolvedVisualPrefab == null || _visualInstance != null)
+            if (_visualInstance != null)
             {
+                Debug.Log($"[RepairNode] {name} already has visual instance '{_visualInstance.name}'.", this);
                 return;
             }
 
-            _visualInstance = CreateVisualInstance(resolvedVisualPrefab);
+            _visualInstance = resolvedVisualPrefab != null
+                ? CreateVisualInstance(resolvedVisualPrefab)
+                : CreateFallbackVisual();
+
+            Debug.Log($"[RepairNode] {name} visual source={(resolvedVisualPrefab != null ? "prefab" : "fallback")} prefab={(resolvedVisualPrefab != null ? resolvedVisualPrefab.name : "null")} path='{visualAssetPath}' root='{_visualInstance.name}' localPosition={_visualInstance.transform.localPosition} localScale={_visualInstance.transform.localScale} usingFallback={_usingFallbackVisual}.", this);
+
             SetLayerRecursively(_visualInstance, gameObject.layer);
 
             if (forceVisualRenderersVisible)
@@ -86,8 +97,10 @@ namespace EclipseProtocol.World
             }
 
             Renderer[] visualRenderers = _visualInstance.GetComponentsInChildren<Renderer>(true);
+            Debug.Log($"[RepairNode] {name} visual renderer count={visualRenderers.Length}.", this);
             if (visualRenderers.Length == 0)
             {
+                Debug.LogWarning($"[RepairNode] {name} has no visual renderers after ConfigureVisual.", this);
                 return;
             }
 
@@ -101,15 +114,18 @@ namespace EclipseProtocol.World
                 EnableRenderers(visualRenderers);
             }
 
-            if (centerVisualBoundsOnRoot)
+            if (centerVisualBoundsOnRoot && !_usingFallbackVisual)
             {
                 CenterVisualBoundsOnRoot(_visualInstance.transform, visualRenderers);
             }
 
-            if (addVisualMeshColliders)
+            if (addVisualMeshColliders && !_usingFallbackVisual)
             {
                 AddVisualMeshColliders(_visualInstance);
             }
+
+            Bounds finalBounds = CalculateRendererBounds(visualRenderers);
+            Debug.Log($"[RepairNode] {name} visual bounds center={finalBounds.center} size={finalBounds.size} active={_visualInstance.activeInHierarchy} statusRenderer={(statusRenderer != null ? statusRenderer.name : "null")}.", this);
         }
 
         private GameObject ResolveVisualPrefab()
@@ -122,11 +138,49 @@ namespace EclipseProtocol.World
 #if UNITY_EDITOR
             if (!string.IsNullOrWhiteSpace(visualAssetPath))
             {
-                return UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(visualAssetPath);
+                GameObject editorVisual = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(visualAssetPath);
+                Debug.Log($"[RepairNode] Editor AssetDatabase lookup path='{visualAssetPath}' result={(editorVisual != null ? editorVisual.name : "null")}.", this);
+                return editorVisual;
             }
 #endif
 
             return null;
+        }
+
+        private GameObject CreateFallbackVisual()
+        {
+            _usingFallbackVisual = true;
+
+            GameObject visualRoot = new GameObject("PowerNodeFallbackVisual");
+            visualRoot.transform.SetParent(transform, false);
+            visualRoot.transform.localPosition = visualLocalPosition;
+            visualRoot.transform.localRotation = Quaternion.Euler(visualLocalEulerAngles);
+            visualRoot.transform.localScale = Vector3.one;
+
+            GameObject baseBlock = CreateFallbackPart("Base", visualRoot.transform, new Vector3(1.4f, 0.28f, 1.4f), new Vector3(0f, -1.72f, 0f), FallbackBodyColor);
+            GameObject column = CreateFallbackPart("Column", visualRoot.transform, new Vector3(0.75f, 1.45f, 0.75f), new Vector3(0f, -0.82f, 0f), FallbackBodyColor);
+            GameObject core = CreateFallbackPart("Core", visualRoot.transform, new Vector3(0.82f, 0.38f, 0.18f), new Vector3(0f, -0.65f, -0.4f), FallbackCoreColor);
+            GameObject antenna = CreateFallbackPart("Antenna", visualRoot.transform, new Vector3(0.18f, 0.8f, 0.18f), new Vector3(0f, 0.15f, 0f), FallbackCoreColor);
+
+            DisableCollider(baseBlock);
+            DisableCollider(column);
+            DisableCollider(core);
+            DisableCollider(antenna);
+            statusRenderer = core.GetComponent<Renderer>();
+
+            return visualRoot;
+        }
+
+        private static GameObject CreateFallbackPart(string name, Transform parent, Vector3 scale, Vector3 localPosition, Color color)
+        {
+            GameObject part = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            part.name = name;
+            part.transform.SetParent(parent, false);
+            part.transform.localPosition = localPosition;
+            part.transform.localRotation = Quaternion.identity;
+            part.transform.localScale = scale;
+            ApplyFallbackMaterial(part.GetComponent<Renderer>(), color);
+            return part;
         }
 
         private GameObject CreateVisualInstance(GameObject resolvedVisualPrefab)
@@ -187,6 +241,57 @@ namespace EclipseProtocol.World
             }
 
             return bounds;
+        }
+
+        private static void ApplyFallbackMaterial(Renderer renderer, Color color)
+        {
+            if (renderer == null)
+            {
+                return;
+            }
+
+            Material sourceMaterial = Resources.Load<Material>("RuntimeSolidColor");
+            Material material;
+            if (sourceMaterial != null)
+            {
+                material = new Material(sourceMaterial);
+            }
+            else
+            {
+                Shader shader = Shader.Find("Eclipse Protocol/Runtime Solid Color");
+                if (shader == null)
+                {
+                    shader = Shader.Find("Sprites/Default");
+                }
+
+                if (shader == null)
+                {
+                    return;
+                }
+
+                material = new Material(shader);
+            }
+
+            material.name = "Power Node Runtime Material";
+            if (material.HasProperty(BaseColorId))
+            {
+                material.SetColor(BaseColorId, color);
+            }
+            if (material.HasProperty(ColorId))
+            {
+                material.SetColor(ColorId, color);
+            }
+
+            renderer.sharedMaterial = material;
+        }
+
+        private static void DisableCollider(GameObject target)
+        {
+            Collider visualCollider = target.GetComponent<Collider>();
+            if (visualCollider != null)
+            {
+                visualCollider.enabled = false;
+            }
         }
 
         private void AddVisualMeshColliders(GameObject visualRoot)
@@ -422,6 +527,7 @@ namespace EclipseProtocol.World
             }
 
             _repairIndicatorRenderer = indicator.GetComponent<Renderer>();
+            ApplyFallbackMaterial(_repairIndicatorRenderer, repairIndicatorIdleColor);
         }
 
         private void SetRepairIndicatorActive(bool isActive)

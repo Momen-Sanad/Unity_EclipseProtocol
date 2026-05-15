@@ -44,21 +44,12 @@ namespace EclipseProtocol.World
     public class RoomExplorationBlackoutController : MonoBehaviour
     {
         private const int MaxRoomRects = 32;
-        private const string ShaderName = "Eclipse Protocol/Room Exploration Blackout";
         private const float HalfPi = Mathf.PI * 0.5f;
+        private const float VisibleRevealThreshold = 0.5f;
+        private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
+        private static readonly int ColorId = Shader.PropertyToID("_Color");
 
-        private static readonly int BlackColorId = Shader.PropertyToID("_BlackColor");
-        private static readonly int OverlayAlphaId = Shader.PropertyToID("_OverlayAlpha");
-        private static readonly int FeatherId = Shader.PropertyToID("_Feather");
-        private static readonly int PlayAreaRectId = Shader.PropertyToID("_PlayAreaRect");
-        private static readonly int RoomRectCountId = Shader.PropertyToID("_RoomRectCount");
-        private static readonly int RoomRectsId = Shader.PropertyToID("_RoomRects");
-        private static readonly int RoomRevealAmountsId = Shader.PropertyToID("_RoomRevealAmounts");
-
-        [SerializeField] private Material blackoutMaterial;
         [SerializeField] private Color blackoutColor = Color.black;
-        [SerializeField, Range(0f, 1f)] private float overlayAlpha = 1f;
-        [SerializeField, Min(0f)] private float feather = 1.1f;
         [SerializeField, Min(0f)] private float revealPadding = 0.2f;
         [SerializeField, Min(0f)] private float overlayHeight = 2.2f;
         [SerializeField, Min(1f)] private float overlayMargin = 48f;
@@ -67,8 +58,6 @@ namespace EclipseProtocol.World
         [SerializeField, Min(0.1f)] private float approachRevealDistance = 8f;
         [SerializeField, Min(0.1f)] private float revealSlerpSpeed = 5f;
 
-        private readonly Vector4[] _roomRectBuffer = new Vector4[MaxRoomRects];
-        private readonly Vector4[] _roomRevealBuffer = new Vector4[MaxRoomRects];
         private RoomExplorationRegion[] _rooms = new RoomExplorationRegion[0];
         private DoorGate[] _entryDoors = new DoorGate[0];
         private bool[] _enteredRooms = new bool[0];
@@ -89,7 +78,7 @@ namespace EclipseProtocol.World
             float roomRevealPadding,
             float meshMargin)
         {
-            blackoutMaterial = material;
+            _ = material;
             _player = player;
             overlayHeight = height;
             revealPadding = roomRevealPadding;
@@ -122,14 +111,13 @@ namespace EclipseProtocol.World
             }
 
             EnsureMaterial();
-            BuildOverlayMesh();
             UpdateTargetRevealAmounts();
             for (int i = 0; i < _revealAmounts.Length; i++)
             {
                 _revealAmounts[i] = _targetRevealAmounts[i];
             }
 
-            PushShaderData();
+            BuildOverlayMesh();
         }
 
         private void Update()
@@ -142,7 +130,7 @@ namespace EclipseProtocol.World
             UpdateTargetRevealAmounts();
             if (UpdateRevealAmounts())
             {
-                PushShaderData();
+                BuildOverlayMesh();
             }
         }
 
@@ -243,86 +231,184 @@ namespace EclipseProtocol.World
                 return;
             }
 
-            if (blackoutMaterial != null)
+            Material sourceMaterial = Resources.Load<Material>("RuntimeSolidColor");
+            if (sourceMaterial != null)
             {
-                _materialInstance = new Material(blackoutMaterial);
-            }
-            else
-            {
-                Shader shader = Shader.Find(ShaderName);
-                if (shader == null)
+                _materialInstance = new Material(sourceMaterial)
                 {
-                    Debug.LogError($"[{nameof(RoomExplorationBlackoutController)}] Could not find shader '{ShaderName}'.", this);
-                    enabled = false;
-                    return;
-                }
-
-                _materialInstance = new Material(shader);
+                    name = "Room Exploration Blackout (Runtime)",
+                    renderQueue = (int)UnityEngine.Rendering.RenderQueue.GeometryLast
+                };
+                ApplyMaterialColor(_materialInstance, blackoutColor);
+                AssignMaterial();
+                return;
             }
 
+            Shader shader = Shader.Find("Eclipse Protocol/Runtime Solid Color");
+            if (shader == null)
+            {
+                shader = Shader.Find("Universal Render Pipeline/Unlit");
+            }
+            if (shader == null)
+            {
+                shader = Shader.Find("Unlit/Color");
+            }
+            if (shader == null)
+            {
+                shader = Shader.Find("Sprites/Default");
+            }
+
+            if (shader == null)
+            {
+                Debug.LogError($"[{nameof(RoomExplorationBlackoutController)}] Could not find a built-in unlit shader.", this);
+                enabled = false;
+                return;
+            }
+
+            _materialInstance = new Material(shader);
             _materialInstance.name = "Room Exploration Blackout (Runtime)";
+            _materialInstance.renderQueue = (int)UnityEngine.Rendering.RenderQueue.GeometryLast;
+            ApplyMaterialColor(_materialInstance, blackoutColor);
+            AssignMaterial();
+        }
+
+        private void AssignMaterial()
+        {
             MeshRenderer meshRenderer = GetComponent<MeshRenderer>();
             meshRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             meshRenderer.receiveShadows = false;
             meshRenderer.sharedMaterial = _materialInstance;
         }
 
+        private static void ApplyMaterialColor(Material material, Color color)
+        {
+            if (material.HasProperty(BaseColorId))
+            {
+                material.SetColor(BaseColorId, color);
+            }
+            if (material.HasProperty(ColorId))
+            {
+                material.SetColor(ColorId, color);
+            }
+        }
+
         private void BuildOverlayMesh()
         {
+            if (_overlayMesh == null)
+            {
+                _overlayMesh = new Mesh
+                {
+                    name = "Room Exploration Blackout Mesh"
+                };
+
+                MeshFilter meshFilter = GetComponent<MeshFilter>();
+                meshFilter.sharedMesh = _overlayMesh;
+            }
+
             Bounds meshBounds = _playAreaBounds;
             meshBounds.Expand(new Vector3(overlayMargin * 2f, 0f, overlayMargin * 2f));
 
             Vector3 min = meshBounds.min;
             Vector3 max = meshBounds.max;
-            Vector3[] vertices =
-            {
-                new Vector3(min.x, overlayHeight, min.z),
-                new Vector3(max.x, overlayHeight, min.z),
-                new Vector3(max.x, overlayHeight, max.z),
-                new Vector3(min.x, overlayHeight, max.z)
-            };
 
-            _overlayMesh = new Mesh
+            List<float> xCuts = new List<float> { min.x, max.x };
+            List<float> zCuts = new List<float> { min.z, max.z };
+
+            for (int i = 0; i < _rooms.Length; i++)
             {
-                name = "Room Exploration Blackout Mesh",
-                vertices = vertices,
-                triangles = new[] { 0, 2, 1, 0, 3, 2 },
-                bounds = new Bounds(meshBounds.center, new Vector3(meshBounds.size.x, 0.1f, meshBounds.size.z))
-            };
+                if (_revealAmounts.Length <= i || _revealAmounts[i] < VisibleRevealThreshold)
+                {
+                    continue;
+                }
+
+                Vector4 rect = _rooms[i].ToRect(revealPadding);
+                AddCut(xCuts, Mathf.Clamp(rect.x, min.x, max.x));
+                AddCut(xCuts, Mathf.Clamp(rect.z, min.x, max.x));
+                AddCut(zCuts, Mathf.Clamp(rect.y, min.z, max.z));
+                AddCut(zCuts, Mathf.Clamp(rect.w, min.z, max.z));
+            }
+
+            xCuts.Sort();
+            zCuts.Sort();
+
+            List<Vector3> vertices = new List<Vector3>();
+            List<int> triangles = new List<int>();
+
+            for (int x = 0; x < xCuts.Count - 1; x++)
+            {
+                float x0 = xCuts[x];
+                float x1 = xCuts[x + 1];
+                if (x1 - x0 <= 0.01f)
+                {
+                    continue;
+                }
+
+                for (int z = 0; z < zCuts.Count - 1; z++)
+                {
+                    float z0 = zCuts[z];
+                    float z1 = zCuts[z + 1];
+                    if (z1 - z0 <= 0.01f)
+                    {
+                        continue;
+                    }
+
+                    Vector2 center = new Vector2((x0 + x1) * 0.5f, (z0 + z1) * 0.5f);
+                    if (IsRevealedCell(center))
+                    {
+                        continue;
+                    }
+
+                    int start = vertices.Count;
+                    vertices.Add(new Vector3(x0, overlayHeight, z0));
+                    vertices.Add(new Vector3(x1, overlayHeight, z0));
+                    vertices.Add(new Vector3(x1, overlayHeight, z1));
+                    vertices.Add(new Vector3(x0, overlayHeight, z1));
+                    triangles.Add(start);
+                    triangles.Add(start + 2);
+                    triangles.Add(start + 1);
+                    triangles.Add(start);
+                    triangles.Add(start + 3);
+                    triangles.Add(start + 2);
+                }
+            }
+
+            _overlayMesh.Clear();
+            _overlayMesh.SetVertices(vertices);
+            _overlayMesh.SetTriangles(triangles, 0);
+            _overlayMesh.bounds = new Bounds(meshBounds.center, new Vector3(meshBounds.size.x, 0.1f, meshBounds.size.z));
             _overlayMesh.RecalculateNormals();
-
-            MeshFilter meshFilter = GetComponent<MeshFilter>();
-            meshFilter.sharedMesh = _overlayMesh;
         }
 
-        private void PushShaderData()
+        private bool IsRevealedCell(Vector2 center)
         {
-            if (_materialInstance == null)
+            for (int i = 0; i < _rooms.Length; i++)
             {
-                return;
+                if (_revealAmounts.Length <= i || _revealAmounts[i] < VisibleRevealThreshold)
+                {
+                    continue;
+                }
+
+                Vector4 rect = _rooms[i].ToRect(revealPadding);
+                if (center.x >= rect.x && center.x <= rect.z && center.y >= rect.y && center.y <= rect.w)
+                {
+                    return true;
+                }
             }
 
-            int roomCount = Mathf.Min(_rooms.Length, MaxRoomRects);
-            for (int i = 0; i < roomCount; i++)
-            {
-                _roomRectBuffer[i] = _rooms[i].ToRect(0f);
-                _roomRevealBuffer[i] = new Vector4(_revealAmounts[i], 0f, 0f, 0f);
-            }
-
-            _materialInstance.SetColor(BlackColorId, blackoutColor);
-            _materialInstance.SetFloat(OverlayAlphaId, overlayAlpha);
-            _materialInstance.SetFloat(FeatherId, feather);
-            _materialInstance.SetVector(PlayAreaRectId, BoundsToRect(_playAreaBounds));
-            _materialInstance.SetInt(RoomRectCountId, roomCount);
-            _materialInstance.SetVectorArray(RoomRectsId, _roomRectBuffer);
-            _materialInstance.SetVectorArray(RoomRevealAmountsId, _roomRevealBuffer);
+            return false;
         }
 
-        private static Vector4 BoundsToRect(Bounds bounds)
+        private static void AddCut(List<float> cuts, float value)
         {
-            Vector3 min = bounds.min;
-            Vector3 max = bounds.max;
-            return new Vector4(min.x, min.z, max.x, max.z);
+            for (int i = 0; i < cuts.Count; i++)
+            {
+                if (Mathf.Abs(cuts[i] - value) <= 0.01f)
+                {
+                    return;
+                }
+            }
+
+            cuts.Add(value);
         }
 
         private static float DistanceToBoundsXZ(Bounds bounds, Vector3 position)
