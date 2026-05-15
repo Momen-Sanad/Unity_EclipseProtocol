@@ -12,9 +12,9 @@ Material:
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords:
-  - _VOLUME_TRANSMISSION_OFF
-  m_InvalidKeywords:
-  - _VERTEX_COLORS_ON
+  - _METALLICSPECGLOSSMAP
+  - _NORMALMAP
+  m_InvalidKeywords: []
   m_LightmapFlags: 6
   m_EnableInstancingVariants: 0
   m_DoubleSidedGI: 1
@@ -27,6 +27,22 @@ Material:
   m_SavedProperties:
     serializedVersion: 3
     m_TexEnvs:
+    - _BaseMap:
+        m_Texture: {fileID: 2800000, guid: 4a7eb5f21f1147639bdc75c2d0429710, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _BumpMap:
+        m_Texture: {fileID: 2800000, guid: e562ed139a394532929102b80764580e, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _EmissionMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _MetallicGlossMap:
+        m_Texture: {fileID: 2800000, guid: 661bd86fc3174f8f8686d6b37c89c1e1, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
     - anisotropyTexture:
         m_Texture: {fileID: 0}
         m_Scale: {x: 0, y: 0}
@@ -105,6 +121,10 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
+    - _BumpScale: 1
+    - _Metallic: 1
+    - _Smoothness: 0
+    - _SmoothnessTextureChannel: 0
     - _ANISOTROPY: 0
     - _AlphaClip: 0
     - _AlphaToMask: 0
@@ -197,6 +217,9 @@ Material:
     - transmissionTextureRotation: 0
     - transmissionTextureTexCoord: 0
     m_Colors:
+    - _BaseColor: {r: 1, g: 1, b: 1, a: 1}
+    - _Color: {r: 1, g: 1, b: 1, a: 1}
+    - _EmissionColor: {r: 0, g: 0, b: 0, a: 0}
     - attenuationColor: {r: 1, g: 1, b: 1, a: 0}
     - baseColorFactor: {r: 1, g: 1, b: 1, a: 1}
     - emissiveFactor: {r: 0, g: 0, b: 0, a: 0}
